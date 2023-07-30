@@ -1,12 +1,15 @@
 
 #include <sdkhooks>
 
+#define __freeguns_glow_included
 //This file includes the code to make the glow effect.
 //Separated for cleanliness.
 
+ConVar glowVar;
+
 public void OnEntityCreated(int entity, const char[] classname)
 {
-	if (!StrEqual(classname, "tf_dropped_weapon"))
+	if (!StrEqual(classname, "tf_dropped_weapon") || !glowVar.BoolValue)
 		return;
 
 	int glowEnt = CreateEntityByName("tf_glow");
