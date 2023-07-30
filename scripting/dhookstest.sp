@@ -15,55 +15,52 @@ public void OnPluginStart()
 {
 	GameData hGameConf = new GameData("tf2.freeguns");
 
+	if(hGameConf == INVALID_HANDLE)
+		SetFailState("FreeGuns: Gamedata not found!");
+
 	StartPrepSDKCall(SDKCall_Raw);
 	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CBaseEntity::GetBaseEntity");
 	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
 	hSDKCallGetBaseEntity = EndPrepSDKCall();
 
-	savedClasses = new KeyValues("savedClasses");
-
-	if(hGameConf == INVALID_HANDLE)
-	{
-		SetFailState("FreeGuns: Gamedata not found!");
-	}
-
 	hCanPickupDroppedWeaponDetour = new DynamicDetour(Address_Null, CallConv_THISCALL, ReturnType_Bool, ThisPointer_CBaseEntity);
 	if (!hCanPickupDroppedWeaponDetour)
-		PrintToConsoleAll("Failed to setup detour for CanPickup");
-	if (!hCanPickupDroppedWeaponDetour.AddParam(HookParamType_ObjectPtr))
-		PrintToConsoleAll("Failed to setup detour for CanPickup 2");
+		SetFailState("Failed to setup detour for CanPickup (Error code 11)");
 	if (!hCanPickupDroppedWeaponDetour.SetFromConf(hGameConf, SDKConf_Signature, "CTFPlayer::CanPickupDroppedWeapon"))
-		PrintToConsoleAll("Failed to setup detour for CanPickup 3");
+		SetFailState("Failed to set signature for CanPickup detour (Error code 12)");
+	if (!hCanPickupDroppedWeaponDetour.AddParam(HookParamType_ObjectPtr))
+		SetFailState("Failed to add param to CanPickup detour (Error code 13)");
 	if (!hCanPickupDroppedWeaponDetour.Enable(Hook_Pre, CanPickupDetour_Pre))
-		PrintToConsoleAll("Failed to setup detour for CanPickup 4");
+		SetFailState("Failed to enable CanPickup pre detour (Error code 14)");
 	if (!hCanPickupDroppedWeaponDetour.Enable(Hook_Post, CanPickupDetour_Post))
-		PrintToConsoleAll("Failed to setup detour for CanPickup 5");
-		
-
-
+		SetFailState("Failed to enable CanPickup post detour (Error code 15)");
 
 	//TODO: update PickupWeaponFromOther function signature and see if it can be made better
 	hPickupWeaponFromOtherDetour = new DynamicDetour(Address_Null, CallConv_THISCALL, ReturnType_Bool, ThisPointer_CBaseEntity);
 	if (!hPickupWeaponFromOtherDetour)
-		PrintToConsoleAll("Failed to setup detour for PickupWeapon");
-	if (!hPickupWeaponFromOtherDetour.AddParam(HookParamType_ObjectPtr))
-		PrintToConsoleAll("Failed to setup detour for PickupWeapon 2");
+		SetFailState("Failed to setup detour for PickupWeapon (Error code 21)");
 	if (!hPickupWeaponFromOtherDetour.SetFromConf(hGameConf, SDKConf_Signature, "CTFPlayer::PickupWeaponFromOther"))
-		PrintToConsoleAll("Failed to setup detour for PickupWeapon 3");
+		SetFailState("Failed to set signature for PickupWeapon detour (Error code 22)");
+	if (!hPickupWeaponFromOtherDetour.AddParam(HookParamType_ObjectPtr))
+		SetFailState("Failed to add param to PickupWeapon detour (Error code 23)");
 	if (!hPickupWeaponFromOtherDetour.Enable(Hook_Pre, PickupWeaponDetour_Pre))
-		PrintToConsoleAll("Failed to setup detour for PickupWeapon 4");
+		SetFailState("Failed to enable PickupWeapon pre detour (Error code 24)");
 	if (!hPickupWeaponFromOtherDetour.Enable(Hook_Post, PickupWeaponDetour_Post))
-		PrintToConsoleAll("Failed to setup detour for PickupWeapon 5");
+		SetFailState("Failed to enable PickupWeapon post detour (Error code 25)");
 
 	hGetEntityForLoadoutSlot = new DynamicDetour(Address_Null, CallConv_THISCALL, ReturnType_CBaseEntity, ThisPointer_CBaseEntity);
 	if (!hGetEntityForLoadoutSlot)
-		PrintToServer("Failed to setup detour for GetEntity");
+		SetFailState("Failed to setup detour for GetEnt (Error code 31)");
 	if (!hGetEntityForLoadoutSlot.SetFromConf(hGameConf, SDKConf_Signature, "CTFPlayer::GetEntityForLoadoutSlot"))
-		PrintToServer("Failed to setup detour for GetEntity 2");
+		SetFailState("Failed to set signature for GetEnt detour (Error code 32)");
 	if (!hGetEntityForLoadoutSlot.AddParam(HookParamType_Int))
-		PrintToServer("Failed to setup detour for GetEntity 3");
+		SetFailState("Failed to add param to GetEnt detour (Error code 33)");
 	if (!hGetEntityForLoadoutSlot.AddParam(HookParamType_Bool))
-		PrintToServer("Failed to setup detour for GetEntity 4");
+		SetFailState("Failed to add param to GetEnt detour (Error code 34)");
+
+	savedClasses = new KeyValues("SavedClasses");
+	if (!savedClasses)
+		SetFailState("Failed to set up SavedClasses (Error code 40)")
 
 }
 
@@ -83,6 +80,8 @@ public MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookPar
 
 	//next, get the item's definition index
 	int iWeaponDef = GetEntProp(iWeaponEnt, Prop_Send, "m_iItemDefinitionIndex");
+
+	//TODO: TF2 Econ plugin. Get the weapon's class (or the first class, if multiclass)
 
 
 
