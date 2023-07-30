@@ -3,6 +3,7 @@
 #include <sdktools>
 #include <dhooks>
 #include <tf2_stocks>
+#include <tf_econ_data>
 
 DynamicDetour hCanPickupDroppedWeaponDetour;
 DynamicDetour hPickupWeaponFromOtherDetour;
@@ -60,9 +61,10 @@ public void OnPluginStart()
 
 	savedClasses = new KeyValues("SavedClasses");
 	if (!savedClasses)
-		SetFailState("Failed to set up SavedClasses (Error code 40)")
+		SetFailState("Failed to set up SavedClasses (Error code 40)");
 
 }
+
 
 // Notes: iPlayer is the index of the player picking up the weapon. Use hReturn and hParams to change the values associated with the function.
 public MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams)
@@ -70,23 +72,13 @@ public MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookPar
 	hGetEntityForLoadoutSlot.Enable(Hook_Pre, GetEntDetour_Pre);
 	hGetEntityForLoadoutSlot.Enable(Hook_Post, GetEntDetour_Post);
 
-	TFClassType curClass = TF2_GetPlayerClass(iPlayer);
-	TFClassType desiredClass;
-
-	//get desired class from item schema
-	//first, get the item itself
+	//to get class from item schema, get item itself first
 	Address weaponMemAddress = hParams.GetAddress(1);
 	int iWeaponEnt = GetEntityFromAddress(weaponMemAddress);
+	SaveClasses(iPlayer, iWeaponEnt);
 
-	//next, get the item's definition index
-	int iWeaponDef = GetEntProp(iWeaponEnt, Prop_Send, "m_iItemDefinitionIndex");
-
-	//TODO: TF2 Econ plugin. Get the weapon's class (or the first class, if multiclass)
-
-
-
-	PrintToServer("CanPickPre: Switch to scout");
-	TF2_SetPlayerClass(iPlayer, TFClass_Scout, true, false);
+	PrintToServer("CanPickPre: Switch to desired class (%i)", GetSavedDesiredClass(iPlayer));
+	TF2_SetPlayerClass(iPlayer, GetSavedDesiredClass(iPlayer), true, false);
 	return MRES_Handled;
 }
 
@@ -98,8 +90,8 @@ public MRESReturn CanPickupDetour_Post (int iPlayer, DHookReturn hReturn, DHookP
 	if (hReturn.Value) PrintToServer("CanPickup passed!");
 	else PrintToServer("CanPickup did not pass...");
 
-	PrintToServer("CanPickPost: Switch back to soldier");
-	TF2_SetPlayerClass(iPlayer, TFClass_Soldier, true, false);
+	PrintToServer("CanPickPost: Switch back to current class (%i)", GetSavedCurrentClass(iPlayer));
+	TF2_SetPlayerClass(iPlayer, GetSavedCurrentClass(iPlayer), true, false);
 
 	return MRES_Handled;
 }
@@ -109,8 +101,8 @@ public MRESReturn PickupWeaponDetour_Pre(int iPlayer, DHookReturn hReturn, DHook
 	hGetEntityForLoadoutSlot.Enable(Hook_Pre, GetEntDetour_Pre);
 	hGetEntityForLoadoutSlot.Enable(Hook_Post, GetEntDetour_Post);
 
-	PrintToServer("PickupWeaponPre: Switch to scout");
-	TF2_SetPlayerClass(iPlayer, TFClass_Scout, true, false);
+	PrintToServer("PickupWeaponPre: Switch to desired class (%i)", GetSavedDesiredClass(iPlayer));
+	TF2_SetPlayerClass(iPlayer, GetSavedDesiredClass(iPlayer), true, false);
 	return MRES_Handled;
 }
 public MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam hParams)
@@ -121,8 +113,8 @@ public MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHo
 	if (hReturn.Value) PrintToServer("PickupWeapon passed!");
 	else PrintToServer("PickupWeapon did not pass...");
 
-	PrintToServer("PickupWeaponPost: Switch back to soldier");
-	TF2_SetPlayerClass(iPlayer, TFClass_Soldier, true, false);
+	PrintToServer("PickupWeaponPost: Switch back to current class (%i)", GetSavedCurrentClass(iPlayer));
+	TF2_SetPlayerClass(iPlayer, GetSavedCurrentClass(iPlayer), true, false);
 
 	return MRES_Handled;
 }
@@ -130,8 +122,8 @@ public MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHo
 public MRESReturn GetEntDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams)
 {
 
-	PrintToServer("GetEntPre: Switch to %s", desiredClass);
-	TF2_SetPlayerClass(iPlayer, TFClass_Soldier, true, false);
+	PrintToServer("GetEntPre: Switch to current class (%i)", GetSavedCurrentClass(iPlayer));
+	TF2_SetPlayerClass(iPlayer, GetSavedCurrentClass(iPlayer), true, false);
 	return MRES_Handled;
 }
 
@@ -141,16 +133,68 @@ public MRESReturn GetEntDetour_Post(int iPlayer, DHookReturn hReturn, DHookParam
 	{
 		char clsname[65];
 		GetEntityClassname(hReturn.Value, clsname, sizeof clsname);
-		PrintToServer("Found item for desired slot (%s)!", clsname);
+		PrintToServer("Found item for needed slot (%s)!", clsname);
 	}
-	else PrintToServer("Found nothing for desired slot...");
+	else PrintToServer("Found nothing for needed slot...");
 
-	PrintToServer("GetEntPost: Switch back to scout");
-	TF2_SetPlayerClass(iPlayer, TFClass_Scout, true, false);
+	PrintToServer("GetEntPost: Switch back to desired class (%i)", GetSavedDesiredClass(iPlayer));
+	TF2_SetPlayerClass(iPlayer, GetSavedDesiredClass(iPlayer), true, false);
 
 	return MRES_Handled;
 }
 
 int GetEntityFromAddress(Address pEntity) {
 	return SDKCall(hSDKCallGetBaseEntity, pEntity);
+}
+
+//get the class for the weapon from the item schema, and save that and the current class to savedClasses
+void SaveClasses(int client, int weapon)
+{
+	TFClassType curClass = TF2_GetPlayerClass(client);
+	TFClassType desiredClass;
+
+	//get the item's definition index
+	int iWeaponDef = GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex");
+
+	//check each class for if this weapon supports it
+	//Civilian/Unknown left out bc i dont know if that actually works ingame
+	TFClassType classes[] = {TFClass_Scout, TFClass_Sniper, TFClass_Soldier, TFClass_DemoMan, TFClass_Medic, TFClass_Heavy, TFClass_Pyro, TFClass_Spy, TFClass_Engineer};
+	for (int i = 0; i < sizeof classes; i++)
+	{
+		if (TF2Econ_GetItemLoadoutSlot(iWeaponDef, classes[i]) != -1)
+		{
+			//there's a slot defined for this class, so it's meant to be for this class
+			desiredClass = classes[i];
+			break;
+		}
+	}
+	char userIdStr[32];
+	IntToString(GetClientUserId(client), userIdStr, sizeof userIdStr);
+
+	savedClasses.JumpToKey(userIdStr, true);
+	savedClasses.SetNum("CurrentClass", view_as<int>(curClass));
+	savedClasses.SetNum("DesiredClass", view_as<int>(desiredClass));
+	savedClasses.Rewind();
+}
+
+TFClassType GetSavedCurrentClass(int client)
+{
+	char userIdStr[32];
+	IntToString(GetClientUserId(client), userIdStr, sizeof userIdStr);
+
+	savedClasses.JumpToKey(userIdStr);
+	TFClassType out = view_as<TFClassType>(savedClasses.GetNum("CurrentClass"));
+	savedClasses.Rewind();
+	return out;
+}
+
+TFClassType GetSavedDesiredClass(int client)
+{
+	char userIdStr[32];
+	IntToString(GetClientUserId(client), userIdStr, sizeof userIdStr);
+
+	savedClasses.JumpToKey(userIdStr);
+	TFClassType out = view_as<TFClassType>(savedClasses.GetNum("DesiredClass"));
+	savedClasses.Rewind();
+	return out;
 }
