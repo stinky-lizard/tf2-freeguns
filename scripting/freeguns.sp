@@ -5,6 +5,8 @@
 #include <tf2_stocks>
 #include <tf_econ_data>
 
+#include <freeguns_glow>
+
 #define PLUGIN_VERSION "0.8"
 
 public Plugin myinfo =
@@ -53,7 +55,7 @@ public void OnPluginStart()
 	hSDKCallGetBaseEntity = EndPrepSDKCall();
 
 	//TODO: update function signatures and see if they can be made better
-	
+
 	hCanPickupDroppedWeaponDetour = new DynamicDetour(Address_Null, CallConv_THISCALL, ReturnType_Bool, ThisPointer_CBaseEntity);
 	if (!hCanPickupDroppedWeaponDetour)
 		SetFailState("Failed to setup detour for CanPickup. (Error code 11)");
@@ -142,20 +144,20 @@ int DisableDetours()
 int DisableDetours2()
 {
 	if (!hCanPickupDroppedWeaponDetour.Disable(Hook_Pre, CanPickupDetour_Pre))
-		return 14;
+		return 64;
 	if (!hCanPickupDroppedWeaponDetour.Disable(Hook_Post, CanPickupDetour_Post))
-		return 15;
+		return 65;
 
 	if (!hPickupWeaponFromOtherDetour.Disable(Hook_Pre, PickupWeaponDetour_Pre))
-		return 24;
+		return 74;
 	if (!hPickupWeaponFromOtherDetour.Disable(Hook_Post, PickupWeaponDetour_Post))
-		return 25;
+		return 75;
 	return 0;
 }
 
 
 // Notes: iPlayer is the index of the player picking up the weapon. Use hReturn and hParams to change the values associated with the function.
-public MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams)
+MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams)
 {
 	hGetEntityForLoadoutSlot.Enable(Hook_Pre, GetEntDetour_Pre);
 	hGetEntityForLoadoutSlot.Enable(Hook_Post, GetEntDetour_Post);
@@ -169,8 +171,7 @@ public MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookPar
 	TF2_SetPlayerClass(iPlayer, GetSavedDesiredClass(iPlayer), true, false);
 	return MRES_Handled;
 }
-
-public MRESReturn CanPickupDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam hParams)
+MRESReturn CanPickupDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam hParams)
 {
 	hGetEntityForLoadoutSlot.Disable(Hook_Pre, GetEntDetour_Pre);
 	hGetEntityForLoadoutSlot.Disable(Hook_Post, GetEntDetour_Post);
@@ -184,7 +185,7 @@ public MRESReturn CanPickupDetour_Post (int iPlayer, DHookReturn hReturn, DHookP
 	return MRES_Handled;
 }
 
-public MRESReturn PickupWeaponDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams)
+MRESReturn PickupWeaponDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams)
 {
 	hGetEntityForLoadoutSlot.Enable(Hook_Pre, GetEntDetour_Pre);
 	hGetEntityForLoadoutSlot.Enable(Hook_Post, GetEntDetour_Post);
@@ -193,7 +194,7 @@ public MRESReturn PickupWeaponDetour_Pre(int iPlayer, DHookReturn hReturn, DHook
 	TF2_SetPlayerClass(iPlayer, GetSavedDesiredClass(iPlayer), true, false);
 	return MRES_Handled;
 }
-public MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam hParams)
+MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam hParams)
 {
 	hGetEntityForLoadoutSlot.Disable(Hook_Pre, GetEntDetour_Pre);
 	hGetEntityForLoadoutSlot.Disable(Hook_Post, GetEntDetour_Post);
@@ -213,15 +214,14 @@ public MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHo
 	return MRES_Handled;
 }
 
-public MRESReturn GetEntDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams)
+MRESReturn GetEntDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams)
 {
 
 	// PrintToServer("GetEntPre: Switch to current class (%i)", GetSavedCurrentClass(iPlayer));
 	TF2_SetPlayerClass(iPlayer, GetSavedCurrentClass(iPlayer), true, false);
 	return MRES_Handled;
 }
-
-public MRESReturn GetEntDetour_Post(int iPlayer, DHookReturn hReturn, DHookParam hParams)
+MRESReturn GetEntDetour_Post(int iPlayer, DHookReturn hReturn, DHookParam hParams)
 {
 	// if (hReturn.Value != -1)
 	// {
