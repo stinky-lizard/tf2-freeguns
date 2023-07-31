@@ -103,24 +103,20 @@ Action CalculateLineOfSight(Handle timer, int glowEntRef)
 
 		GetEntPropVector(glowEnt.parentRef, Prop_Send, "m_vecOrigin", glowpos);
 
-		// glowpos[0] += (eyepos[0] - glowpos[0]) * 0.02;
-		// glowpos[1] += (eyepos[1] - glowpos[1]) * 0.02;
-		// glowpos[2] += (eyepos[2] - glowpos[2]) * 0.02;
+		Handle hTrace = TR_TraceRayFilterEx(eyepos, glowpos, MASK_SOLID, RayType_EndPoint, ClientViewsFilter);
 
-		PrintToServer("[%f %f %f]", eyepos[0], eyepos[1], eyepos[2]); //debug
-		PrintToServer("[%f %f %f]", glowpos[0], glowpos[1], glowpos[2]);
-		Handle hTrace = TR_TraceRayEx(eyepos, glowpos, MASK_VISIBLE, RayType_EndPoint);
-		if (TR_DidHit(hTrace))
+		//// int rayHit = TR_GetEntityIndex(hTrace);
+		//// char rayHitClass[64];
+		//// if (IsValidEntity(rayHit))
+		//// {
+		//// 	GetEntityClassname(rayHit, rayHitClass, sizeof rayHitClass);
+		//// 	PrintToServer("Ray hit %i, %s", rayHit, rayHitClass);
+		//// }
+		//// else PrintToServer("Ray hit nothing");
+		if (TR_GetEntityIndex(hTrace) == EntRefToEntIndex(glowEnt.parentRef))
 		{
-			PrintToServer("%i does not have sight", client);
-			//if it hit, they don't have sight
-			int index = FindClientInSightArray(glowEnt, client);
-			if (index != -1)
-				glowEnt.playersWithSight[index] = 0;
-		}
-		else
-		{
-			PrintToServer("%i does have sight", client);
+			//the ray hit the weapon first, not the world, so they have LOS
+			////PrintToServer("%i does have sight", client);
 			int userid = GetClientUserId(client);
 
 			//sanity check
@@ -132,16 +128,31 @@ Action CalculateLineOfSight(Handle timer, int glowEntRef)
 				{
 					if (glowEnt.playersWithSight[i] == 0)
 					{
-						PrintToServer("Adding them to index %i", i);
+						////PrintToServer("Adding them to index %i", i);
 						glowEnt.playersWithSight[i] = userid;
 						break;
 					}
 				}
 			}
 		}
+		else
+		{
+			//// PrintToServer("%i does not have sight", client);
+			//if it hit, they don't have sight
+			int index = FindClientInSightArray(glowEnt, client);
+			if (index != -1)
+			{
+				////PrintToServer("Removing them from index %i", index);
+				glowEnt.playersWithSight[index] = 0;
+
+			}
+		}
 
 		delete hTrace;
 	}
+
+	//save any changes done to the GlowEntity
+	allGlowEntities.SetArray(glowEntArrIndex, glowEnt);
 
 	return Plugin_Continue;
 }
@@ -203,4 +214,19 @@ bool GetGlowEntOfEntRef(int glowEntRef, GlowEntity buffer, int &arrIndex)
 
 	allGlowEntities.GetArray(arrIndex, buffer);
 	return true;
+}
+
+bool ClientViewsFilter(int entity, int contentsmask)
+{
+	if (!IsValidEntity(entity)) return false;
+
+	char clsname[64];
+	GetEntityClassname(entity, clsname, sizeof clsname);
+
+	//if it's the world itself
+	if (entity == 0) return true;
+	//if it's a weapon
+	else if (StrEqual(clsname, "tf_dropped_weapon")) return true;
+	//ignore everything else
+	else return false;
 }
