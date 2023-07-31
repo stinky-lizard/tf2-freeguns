@@ -46,8 +46,9 @@ public void OnPluginStart()
 
 	#if defined __freeguns_glow_included
 		glowVar = CreateConVar("sm_freeguns_glow", "1", "Enable/disable custom weapon glow. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
+		allGlowEntities = new ArrayList(sizeof GlowEntity);
 	#endif
-	
+
 	GameData hGameConf = new GameData("tf2.freeguns");
 
 	if(hGameConf == INVALID_HANDLE)
@@ -104,11 +105,13 @@ void EnabledVarChanged(ConVar convar, const char[] oldValue, const char[] newVal
 	if (StringToInt(oldValue) == 0 && StringToInt(newValue) != 0)
 	{
 		//it was false, now it's true
+		LogMessage("Enabling Freeguns.");
 		EnableDetours();
 	}
 	else if (StringToInt(oldValue) != 0 && StringToInt(newValue) == 0)
 	{
 		//it was true, now it's false
+		LogMessage("Disabling Freeguns.");
 		DisableDetours();
 	}
 }
