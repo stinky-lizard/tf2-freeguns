@@ -5,7 +5,6 @@
 #include <tf2_stocks>
 #include <tf_econ_data>
 
-#include <freeguns_glow>
 
 #define PLUGIN_VERSION "0.8"
 
@@ -37,6 +36,8 @@ Handle hSDKCallGetBaseEntity;
 KeyValues savedClasses;
 
 ConVar enabledVar;
+
+#include <freeguns_glow>
 
 public void OnPluginStart()
 {

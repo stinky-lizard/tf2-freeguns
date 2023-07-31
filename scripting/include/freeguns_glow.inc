@@ -27,7 +27,7 @@ public void OnMapEnd() { mapLoaded = false; }
 
 public void OnEntityCreated(int weaponEnt, const char[] classname)
 {
-	if (!StrEqual(classname, "tf_dropped_weapon") || !glowVar.BoolValue || !mapLoaded)
+	if (!StrEqual(classname, "tf_dropped_weapon") || !enabledVar.BoolValue || !glowVar.BoolValue || !mapLoaded)
 		return;
 
 	GlowEntity glowEnt;
