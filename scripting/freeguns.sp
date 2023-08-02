@@ -4,6 +4,7 @@
 #include <dhooks>
 #include <tf2_stocks>
 #include <tf_econ_data>
+#include <sdkhooks>
 
 
 #define PLUGIN_VERSION "0.8"
@@ -28,6 +29,10 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	return APLRes_Success;
 }
 
+bool mapLoaded;
+public void OnMapStart() { mapLoaded = true; }
+public void OnMapEnd() { mapLoaded = false; }
+
 DynamicDetour hCanPickupDroppedWeaponDetour;
 DynamicDetour hPickupWeaponFromOtherDetour;
 DynamicDetour hGetEntityForLoadoutSlot;
@@ -37,10 +42,102 @@ KeyValues savedClasses;
 
 ConVar enabledVar;
 
-#include <freeguns_glow>
+
+// #include <freeguns_glow>
+// #include <freeguns_hud>
+#define DEBUG
+
+public void OnEntityCreated(int entity, const char[] classname)
+{
+	#if defined __freeguns_glow_included
+		GlowOnEntityCreated(entity, classname);
+	#endif
+	#if defined __freeguns_hud_included
+		HudOnEntityCreated(entity, classname);
+	#endif
+}
+
+#if defined DEBUG2
+// Action KillEnt(Handle hTimer, int data)
+// {
+// 	RemoveEntity(data);
+// 	return Plugin_Handled;
+// }
+
+// #include <protobuf>
+// KeyValues testKv;
+// bool on;
+// Action DebugTimer(Handle timer)
+// {
+// 	if (!on)
+// 	{
+// 		PrintToServer("Enabling");
+// 		on = true;
+// 		for (int client = 1; client < MaxClients; client++)
+// 		{
+// 			if (IsClientInGame(client))
+// 			{
+// 				// ShowVGUIPanel(client, "GameConsole", testKv, true);
+// 				// ShowVGUIPanel(client, "GameConsole", _, true);
+// 				int entity = CreateEntityByName("game_text_tf");
+// 				DispatchKeyValue(entity, "message", "This is a game_text_tf! Test!");
+// 				DispatchKeyValue(entity, "targetname", "myText");
+// 				DispatchSpawn(entity);
+// 				AcceptEntityInput(entity, "Display", entity, entity);
+// 				CreateTimer(1.0, KillEnt, entity);
+// 			}
+// 		}
+
+// 	}
+// 	else
+// 	{
+// 		// PrintToServer("Disabling");
+// 		on = false;
+// 		for (int client = 1; client < MaxClients; client++)
+// 		{
+// 			if (IsClientInGame(client))
+// 			{
+
+// 				// ShowVGUIPanel(client, "GameConsole", testKv, false);
+// 				// ShowVGUIPanel(client, "GameConsole", _, false);
+// 			}
+// 		}
+// 	}
+// 	return Plugin_Continue;
+// }
+// Action UserMsg_VGUIMenu(UserMsg msg_id, BfRead msg, const int[] players, int playersNum, bool reliable, bool init)
+// {
+// 	// PrintToServer("Exists: %s", msg.HasField("name") ? "true" : "false");
+// 	char str[256];
+// 	msg.ReadString(str, sizeof str);
+// 	PrintToServer("Name: %s", str);
+// 	return Plugin_Continue;
+// }
+// // Action UserMsg_VGUIMenu(UserMsg msg_id, BfRead msg, const int[] players, int playersNum, bool reliable, bool init)
+// // {
+// // 	PrintToServer("Exists: %s", msg.HasField("name") ? "true" : "false");
+// // 	char str[256];
+// // 	msg.ReadString("name", str, sizeof str);
+// // 	PrintToServer("Name: %s", str);
+// // 	return Plugin_Continue;
+// // }
+#endif
 
 public void OnPluginStart()
 {
+	#if defined DEBUG2
+	// testKv = new KeyValues("data");
+	// testKv.SetString("xpos", "100");
+	// testKv.SetString("ypos", "250");
+	// testKv.SetString("zpos", "0");
+	// testKv.SetString("wide", "640");
+	// testKv.SetString("tall", "100");
+	// testKv.SetString("visible", "1");
+	// testKv.SetString("enabled", "1");
+	// testKv.SetString("fillcolor", "HudBlack");
+	// CreateTimer(1.0, DebugTimer, _, TIMER_REPEAT);
+	// // HookUserMessage(GetUserMessageId("VGUIMenu"), UserMsg_VGUIMenu);
+	#endif
 
 	CreateConVar("sm_freeguns_version", PLUGIN_VERSION, "Standard plugin version ConVar. Please don't change me!", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	enabledVar = CreateConVar("sm_freeguns_enabled", "1", "Enable/disable Freeguns. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
@@ -48,6 +145,10 @@ public void OnPluginStart()
 	#if defined __freeguns_glow_included
 		glowVar = CreateConVar("sm_freeguns_glow", "1", "Enable/disable custom weapon glow. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
 		allGlowEntities = new ArrayList(sizeof GlowEntity);
+	#endif
+
+	#if defined __freeguns_hud_included
+		hudVar = CreateConVar("sm_freeguns_hud", "1", "Enable/disable custom weapon HUD element. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	#endif
 
 	GameData hGameConf = new GameData("tf2.freeguns");
@@ -174,21 +275,24 @@ MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hPar
 	Address weaponMemAddress = hParams.GetAddress(1);
 	int iWeaponEnt = GetEntityFromAddress(weaponMemAddress);
 	SaveClasses(iPlayer, iWeaponEnt);
-
-	// PrintToServer("CanPickPre: Switch to desired class (%i)", GetSavedDesiredClass(iPlayer)); //debug
-	TF2_SetPlayerClass(iPlayer, GetSavedDesiredClass(iPlayer), true, false);
+	#if defined DEBUG
+	PrintToServer("---------------New Pickup Process Start---------------");
+	PrintToServer("CanPickPre: Switch to desired class (%i)", GetSavedDesiredClass(iPlayer));
+	#endif
+	TF2_SetPlayerClass(iPlayer, GetSavedDesiredClass(iPlayer), _, false);
 	return MRES_Handled;
 }
 MRESReturn CanPickupDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam hParams)
 {
 	hGetEntityForLoadoutSlot.Disable(Hook_Pre, GetEntDetour_Pre);
 	hGetEntityForLoadoutSlot.Disable(Hook_Post, GetEntDetour_Post);
+	#if defined DEBUG
+	if (hReturn.Value) PrintToServer("CanPickup passed!");
+	else PrintToServer("CanPickup did not pass...");
 
-	// if (hReturn.Value) PrintToServer("CanPickup passed!");
-	// else PrintToServer("CanPickup did not pass...");
-
-	// PrintToServer("CanPickPost: Switch back to current class (%i)", GetSavedCurrentClass(iPlayer));
-	TF2_SetPlayerClass(iPlayer, GetSavedCurrentClass(iPlayer), true, false);
+	PrintToServer("CanPickPost: Switch back to current class (%i)", GetSavedCurrentClass(iPlayer));
+	#endif
+	TF2_SetPlayerClass(iPlayer, GetSavedCurrentClass(iPlayer), _, false);
 
 	return MRES_Handled;
 }
@@ -197,9 +301,10 @@ MRESReturn PickupWeaponDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam h
 {
 	hGetEntityForLoadoutSlot.Enable(Hook_Pre, GetEntDetour_Pre);
 	hGetEntityForLoadoutSlot.Enable(Hook_Post, GetEntDetour_Post);
-
-	// PrintToServer("PickupWeaponPre: Switch to desired class (%i)", GetSavedDesiredClass(iPlayer));
-	TF2_SetPlayerClass(iPlayer, GetSavedDesiredClass(iPlayer), true, false);
+	#if defined DEBUG
+	PrintToServer("PickupWeaponPre: Switch to desired class (%i)", GetSavedDesiredClass(iPlayer));
+	#endif
+	TF2_SetPlayerClass(iPlayer, GetSavedDesiredClass(iPlayer), _, false);
 	return MRES_Handled;
 }
 MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam hParams)
@@ -207,11 +312,13 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 	hGetEntityForLoadoutSlot.Disable(Hook_Pre, GetEntDetour_Pre);
 	hGetEntityForLoadoutSlot.Disable(Hook_Post, GetEntDetour_Post);
 
-	// if (hReturn.Value) PrintToServer("PickupWeapon passed!");
-	// else PrintToServer("PickupWeapon did not pass...");
+	#if defined DEBUG
+	if (hReturn.Value) PrintToServer("PickupWeapon passed!");
+	else PrintToServer("PickupWeapon did not pass...");
 
-	// PrintToServer("PickupWeaponPost: Switch back to current class (%i)", GetSavedCurrentClass(iPlayer));
-	TF2_SetPlayerClass(iPlayer, GetSavedCurrentClass(iPlayer), true, false);
+	PrintToServer("PickupWeaponPost: Switch back to current class (%i)", GetSavedCurrentClass(iPlayer));
+	#endif
+	TF2_SetPlayerClass(iPlayer, GetSavedCurrentClass(iPlayer), _, false);
 
 
 	//we're done! delete the user's key
@@ -224,23 +331,26 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 
 MRESReturn GetEntDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams)
 {
-
-	// PrintToServer("GetEntPre: Switch to current class (%i)", GetSavedCurrentClass(iPlayer));
-	TF2_SetPlayerClass(iPlayer, GetSavedCurrentClass(iPlayer), true, false);
+	#if defined DEBUG
+	PrintToServer("GetEntPre: Switch to current weapon class (%i)", GetSavedCurrentWeaponClass(iPlayer));
+	#endif
+	TF2_SetPlayerClass(iPlayer, GetSavedCurrentWeaponClass(iPlayer), _, false);
 	return MRES_Handled;
 }
 MRESReturn GetEntDetour_Post(int iPlayer, DHookReturn hReturn, DHookParam hParams)
 {
-	// if (hReturn.Value != -1)
-	// {
-	// 	char clsname[65];
-	// 	GetEntityClassname(hReturn.Value, clsname, sizeof clsname);
-	// 	// PrintToServer("Found item for needed slot (%s)!", clsname);
-	// }
-	// else PrintToServer("Found nothing for needed slot...");
+	#if defined DEBUG
+	if (hReturn.Value != -1)
+	{
+		char clsname[65];
+		GetEntityClassname(hReturn.Value, clsname, sizeof clsname);
+		PrintToServer("Found item for needed slot (%s)!", clsname);
+	}
+	else PrintToServer("Found nothing for needed slot...");
 
-	// PrintToServer("GetEntPost: Switch back to desired class (%i)", GetSavedDesiredClass(iPlayer));
-	TF2_SetPlayerClass(iPlayer, GetSavedDesiredClass(iPlayer), true, false);
+	PrintToServer("GetEntPost: Switch back to desired class (%i)", GetSavedDesiredClass(iPlayer));
+	#endif
+	TF2_SetPlayerClass(iPlayer, GetSavedDesiredClass(iPlayer), _, false);
 
 	return MRES_Handled;
 }
@@ -255,6 +365,57 @@ void SaveClasses(int client, int weapon)
 	TFClassType curClass = TF2_GetPlayerClass(client);
 	TFClassType desiredClass;
 
+	int loadoutSlotUsedByPickup;
+	desiredClass = GetClassOfWeapon(weapon, loadoutSlotUsedByPickup);
+
+	char userIdStr[32];
+	IntToString(GetClientUserId(client), userIdStr, sizeof userIdStr);
+
+	savedClasses.JumpToKey(userIdStr, true);
+	savedClasses.SetNum("CurrentClass", view_as<int>(curClass));
+	savedClasses.SetNum("DesiredClass", view_as<int>(desiredClass));
+
+	//finally, we need to save the class of the weapon we currently have (in the relevant slot, not the one that's out), since that might not necessarily be our player class
+	//if we have a foreign weapon, GetEntityForLoadoutSlot won't find a weapon that matches our class (because we don't have one).
+
+	int unneeded, weaponSlotUsedByPickup;
+
+	//have to translate the relevant LOADOUT slot to the relevant WEAPON slot. They are not defined the same way, and some values match differently.
+	//Since we're only dealing with weapons you can pick up, we only really need to deal with the three main weapon slots.
+
+	//While this might be optimizable, since it seems like the loadout slots and the weapon slots are the same for the three main ones,
+	//I'm not sure about that. This is safer.
+	char weaponSlotName[64];
+	TF2Econ_TranslateLoadoutSlotIndexToName(loadoutSlotUsedByPickup, weaponSlotName, sizeof weaponSlotName);
+	if (StrEqual(weaponSlotName, "primary")) weaponSlotUsedByPickup = TFWeaponSlot_Primary;
+	if (StrEqual(weaponSlotName, "secondary")) weaponSlotUsedByPickup = TFWeaponSlot_Secondary;
+	if (StrEqual(weaponSlotName, "melee")) weaponSlotUsedByPickup = TFWeaponSlot_Melee;
+
+	#if defined DEBUG
+	PrintToServer("LoadoutSlot: %i", loadoutSlotUsedByPickup);
+	PrintToServer("WeaponSlot: %i", weaponSlotUsedByPickup);
+	PrintToServer("WeaponSlotName: %s", weaponSlotName);
+	#endif
+
+	int weaponToDrop = GetPlayerWeaponSlot(client, weaponSlotUsedByPickup);
+	if (weaponToDrop != -1) 
+		savedClasses.SetNum("CurrentWeaponClass", view_as<int>(GetClassOfWeapon(weaponToDrop, unneeded)));
+	#if defined DEBUG
+	else
+		//they don't have a weapon in this slot, so they don't have a weapon to drop
+		PrintToServer("No weapon in slot %i", weaponSlotUsedByPickup);
+		//CurrentWeaponClass will be set to 0, which technically IS a class, it's just TFClass_Unknown
+		//since no item is allowed on TFClass_Unknown, the pickup will be stopped by GetEntityForLoadoutSlot (since the class doesn't match)
+		//which I guess is the best possible outcome. It works intuitively (GetEntityForLoadoutSlot stops the process because there is no entity!)
+	#endif
+
+	savedClasses.Rewind();
+}
+
+TFClassType GetClassOfWeapon(int weapon, int& loadoutSlot)
+{
+	TFClassType out;
+
 	//get the item's definition index
 	int iWeaponDef = GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex");
 
@@ -263,20 +424,16 @@ void SaveClasses(int client, int weapon)
 	TFClassType classes[] = {TFClass_Scout, TFClass_Sniper, TFClass_Soldier, TFClass_DemoMan, TFClass_Medic, TFClass_Heavy, TFClass_Pyro, TFClass_Spy, TFClass_Engineer};
 	for (int i = 0; i < sizeof classes; i++)
 	{
-		if (TF2Econ_GetItemLoadoutSlot(iWeaponDef, classes[i]) != -1)
+		int tempSlot = TF2Econ_GetItemLoadoutSlot(iWeaponDef, classes[i]);
+		if (tempSlot != -1)
 		{
 			//there's a slot defined for this class, so it's meant to be for this class
-			desiredClass = classes[i];
+			out = classes[i];
+			loadoutSlot = tempSlot;
 			break;
 		}
 	}
-	char userIdStr[32];
-	IntToString(GetClientUserId(client), userIdStr, sizeof userIdStr);
-
-	savedClasses.JumpToKey(userIdStr, true);
-	savedClasses.SetNum("CurrentClass", view_as<int>(curClass));
-	savedClasses.SetNum("DesiredClass", view_as<int>(desiredClass));
-	savedClasses.Rewind();
+	return out;
 }
 
 TFClassType GetSavedCurrentClass(int client)
@@ -286,6 +443,17 @@ TFClassType GetSavedCurrentClass(int client)
 
 	savedClasses.JumpToKey(userIdStr);
 	TFClassType out = view_as<TFClassType>(savedClasses.GetNum("CurrentClass"));
+	savedClasses.Rewind();
+	return out;
+}
+
+TFClassType GetSavedCurrentWeaponClass(int client)
+{
+	char userIdStr[32];
+	IntToString(GetClientUserId(client), userIdStr, sizeof userIdStr);
+
+	savedClasses.JumpToKey(userIdStr);
+	TFClassType out = view_as<TFClassType>(savedClasses.GetNum("CurrentWeaponClass"));
 	savedClasses.Rewind();
 	return out;
 }

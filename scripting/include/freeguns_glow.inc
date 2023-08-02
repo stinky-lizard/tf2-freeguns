@@ -1,18 +1,14 @@
-
-#include <sdkhooks>
+// #pragma semicolon 1
+// #pragma newdecls required
 
 #define __freeguns_glow_included
 //This file includes the code to make the glow effect.
 //Separated for cleanliness.
 
-#define EF_BONEMERGE 0x001
-#define EF_BONEMERGE_FASTCULL 0x080
-
 ConVar glowVar;
 //I wished there's a more elegant solution than this, but it seems that's all for naught :(
 ArrayList allGlowEntities;
 
-bool mapLoaded;
 
 enum struct GlowEntity
 {
@@ -21,11 +17,7 @@ enum struct GlowEntity
 	int playersWithSight[MAXPLAYERS];
 }
 
-
-public void OnMapStart() { mapLoaded = true; }
-public void OnMapEnd() { mapLoaded = false; }
-
-public void OnEntityCreated(int weaponEnt, const char[] classname)
+void GlowOnEntityCreated(int weaponEnt, const char[] classname)
 {
 	if (!StrEqual(classname, "tf_dropped_weapon") || !enabledVar.BoolValue || !glowVar.BoolValue || !mapLoaded)
 		return;
