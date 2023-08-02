@@ -39,11 +39,13 @@ KeyValues savedClasses;
 ConVar enabledVar;
 
 #include <freeguns_glow>
-// #include <freeguns_hud>
+#include <freeguns_hud>
 // #define DEBUG
+// #define DEBUG3
 
 public void OnEntityCreated(int entity, const char[] classname)
 {
+
 	#if defined __freeguns_glow_included
 		GlowOnEntityCreated(entity, classname);
 	#endif
