@@ -1,4 +1,4 @@
-# tf2-freeguns
+# TF2 - Free Guns!
 Sourcemod plugin that allows any class to pick up any weapon on the ground.
 
 To install, simply go to the Releases section and unpack the archive into your TF2 server installation.
