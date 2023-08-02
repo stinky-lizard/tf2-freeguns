@@ -11,11 +11,11 @@
 
 public Plugin myinfo =
 {
-	name = "Freeguns",
+	name = "[TF2] Freeguns",
 	author = "Stinky Lizard",
-	description = "Kill your enemy. Steal their stuff.",
+	description = "Kill your enemy. Steal their stuff. No class restrictions. Change settings with the sm_freeguns cvars.",
 	version = PLUGIN_VERSION,
-	url = "freak.tf2.host"
+	url = "github.com/stinky-lizard"
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
