@@ -38,9 +38,9 @@ KeyValues savedClasses;
 
 ConVar enabledVar;
 
-// #include <freeguns_glow>
+#include <freeguns_glow>
 // #include <freeguns_hud>
-#define DEBUG
+// #define DEBUG
 
 public void OnEntityCreated(int entity, const char[] classname)
 {
@@ -72,8 +72,6 @@ public void OnEntityCreated(int entity, const char[] classname)
 // 		{
 // 			if (IsClientInGame(client))
 // 			{
-// 				// ShowVGUIPanel(client, "GameConsole", testKv, true);
-// 				// ShowVGUIPanel(client, "GameConsole", _, true);
 // 				int entity = CreateEntityByName("game_text_tf");
 // 				DispatchKeyValue(entity, "message", "This is a game_text_tf! Test!");
 // 				DispatchKeyValue(entity, "targetname", "myText");
@@ -138,12 +136,12 @@ public void OnPluginStart()
 	enabledVar = CreateConVar("sm_freeguns_enabled", "1", "Enable/disable Freeguns. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
 
 	#if defined __freeguns_glow_included
-		glowVar = CreateConVar("sm_freeguns_glow", "1", "Enable/disable custom weapon glow. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
+		glowVar = CreateConVar("sm_freeguns_glow", "0", "Enable/disable custom weapon glow. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
 		allGlowEntities = new ArrayList(sizeof GlowEntity);
 	#endif
 
 	#if defined __freeguns_hud_included
-		hudVar = CreateConVar("sm_freeguns_hud", "1", "Enable/disable custom weapon HUD element. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
+		hudVar = CreateConVar("sm_freeguns_hud", "0", "Enable/disable custom weapon HUD element. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	#endif
 
 	GameData hGameConf = new GameData("tf2.freeguns");
@@ -158,12 +156,9 @@ public void OnPluginStart()
 	//TODO: update function signatures and see if they can be made better
 
 	hCanPickupDroppedWeaponDetour = new DynamicDetour(Address_Null, CallConv_THISCALL, ReturnType_Bool, ThisPointer_CBaseEntity);
-	if (!hCanPickupDroppedWeaponDetour)
-		SetFailState("Failed to setup detour for CanPickup. (Error code 11)");
-	if (!hCanPickupDroppedWeaponDetour.SetFromConf(hGameConf, SDKConf_Signature, "CTFPlayer::CanPickupDroppedWeapon"))
-		SetFailState("Failed to set signature for CanPickup detour. (Error code 12)");
-	if (!hCanPickupDroppedWeaponDetour.AddParam(HookParamType_ObjectPtr))
-		SetFailState("Failed to add param to CanPickup detour. (Error code 13)");
+	if (!hCanPickupDroppedWeaponDetour) SetFailState("Failed to setup detour for CanPickup. (Error code 11)");
+	if (!hCanPickupDroppedWeaponDetour.SetFromConf(hGameConf, SDKConf_Signature, "CTFPlayer::CanPickupDroppedWeapon")) SetFailState("Failed to set signature for CanPickup detour. (Error code 12)");
+	if (!hCanPickupDroppedWeaponDetour.AddParam(HookParamType_ObjectPtr)) SetFailState("Failed to add param to CanPickup detour. (Error code 13)");
 
 	hPickupWeaponFromOtherDetour = new DynamicDetour(Address_Null, CallConv_THISCALL, ReturnType_Bool, ThisPointer_CBaseEntity);
 	if (!hPickupWeaponFromOtherDetour) SetFailState("Failed to setup detour for PickupWeapon. (Error code 21)");
