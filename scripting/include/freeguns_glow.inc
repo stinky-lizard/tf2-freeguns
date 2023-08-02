@@ -5,6 +5,14 @@
 //This file includes the code to make the glow effect.
 //Separated for cleanliness.
 
+#if !defined __freeguns_hud_included
+	bool mapLoaded;
+	public void OnMapStart() { mapLoaded = true; }
+	public void OnMapEnd() { mapLoaded = false; }
+#endif
+	//if hud included is already defined, then these are already declared/defined there
+	//usually glow would be included first, but if it's included second then hud would have already done this
+
 ConVar glowVar;
 //I wished there's a more elegant solution than this, but it seems that's all for naught :(
 ArrayList allGlowEntities;
