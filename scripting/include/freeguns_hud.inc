@@ -21,38 +21,80 @@ void HudOnEntityCreated(int entity, const char[] classname)
 	if (createWeapon) RequestFrame(OnNextFrame, entity);
 
 	// SDKHook(entity, SDKHook_ThinkPost, OnWeaponThink);
-}
 
+	CreateTimer(0.1, OnTimer, EntIndexToEntRef(entity), TIMER_REPEAT);
+}
 void OnNextFrame(int entity)
 {
-	PrintToServer("Att: %i", GetEntProp(entity, Prop_Send, "m_iAttributeDefinitionIndex"));
-	createWeapon = false;
-	int newent = CreateEntityByName("tf_dropped_weapon");
-	createWeapon = true;
-	SetEntProp(newent, Prop_Send, "m_iItemDefinitionIndex", 30758);
-	SetEntProp(newent, Prop_Send, "m_iEntityLevel", GetEntProp(entity, Prop_Send, "m_iEntityLevel"));
-	SetEntProp(newent, Prop_Send, "m_iItemIDHigh", GetEntProp(entity, Prop_Send, "m_iItemIDHigh"));
-	SetEntProp(newent, Prop_Send, "m_iItemIDLow", GetEntProp(entity, Prop_Send, "m_iItemIDLow"));
-	SetEntProp(newent, Prop_Send, "m_iAccountID", GetEntProp(entity, Prop_Send, "m_iAccountID"));
-	SetEntProp(newent, Prop_Send, "m_iEntityQuality", GetEntProp(entity, Prop_Send, "m_iEntityQuality"));
-	SetEntProp(newent, Prop_Send, "m_bInitialized", GetEntProp(entity, Prop_Send, "m_bInitialized"));
-	SetEntProp(newent, Prop_Send, "m_bOnlyIterateItemViewAttributes", GetEntProp(entity, Prop_Send, "m_bOnlyIterateItemViewAttributes"));
-	SetEntProp(newent, Prop_Send, "m_iTeamNumber", GetEntProp(entity, Prop_Send, "m_iTeamNumber"));
-	float pos[3];
-	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
-	if (IsModelPrecached("models/workshop_partner/weapons/c_models/c_prinny_knife/c_prinny_knife.mdl"))
-		SetEntityModel(newent, "models/workshop_partner/weapons/c_models/c_prinny_knife/c_prinny_knife.mdl");
-	else PrintToServer ("aw :(");
-	TeleportEntity(newent, pos);
-
-	SetVariantString("!activator");
-	AcceptEntityInput(newent, "SetParent", entity);
-	//oh my god holy shit
-	SetEntityRenderMode(newent, RENDER_NONE);
-	// SetEntPropFloat(newent, Prop_Send, "m_flModelScale", 2.0);
-
-	DispatchSpawn(newent);
+	//saxxy is more well-known and has less "huh?" factor than machete
+	// SetEntProp(entity, Prop_Send, "m_iItemDefinitionIndex", 30758); //prinny machete, all-class weapon
+	SetEntProp(entity, Prop_Send, "m_iItemDefinitionIndex", 423); //saxxy, all-class weapon
 }
+
+
+Action OnTimer(Handle timer, int myent)
+{
+	if (!IsValidEntity(myent)) return Plugin_Stop;
+	// int entity = EntRefToEntIndex(mywep);
+	for (int i = 0; i < 400; i++)
+	{
+		//hehehe. yup
+		PrintToChatAll("yup %i", i);
+		GetClientAimTarget((i % 10) + 10, false);
+
+	}
+	return Plugin_Continue;
+	// for (int client = 1; client < MaxClients; client++)
+	// {
+	// 	if (IsClientInGame(client))
+	// 	{
+	// 		PrintToChatAll("Looking %i!", client);
+	// 		if (GetClientAimTarget(client, false) == entity)
+	// 		{
+	// 		}
+	// 	}
+		// if (IsClientInGame(client) && !IsFakeClient(client))
+		// {
+		// 	if (GetClientAimTarget(client, false) == entity)
+		// 	{
+		// 		//they're looking at us
+		// 	}
+
+		// }
+
+	// }
+}
+
+// void OnNextFrame(int entity)
+// {
+// 	PrintToServer("Att: %i", GetEntProp(entity, Prop_Send, "m_iAttributeDefinitionIndex"));
+// 	createWeapon = false;
+// 	int newent = CreateEntityByName("tf_dropped_weapon");
+// 	createWeapon = true;
+// 	SetEntProp(newent, Prop_Send, "m_iItemDefinitionIndex", 30758);
+// 	SetEntProp(newent, Prop_Send, "m_iEntityLevel", GetEntProp(entity, Prop_Send, "m_iEntityLevel"));
+// 	SetEntProp(newent, Prop_Send, "m_iItemIDHigh", GetEntProp(entity, Prop_Send, "m_iItemIDHigh"));
+// 	SetEntProp(newent, Prop_Send, "m_iItemIDLow", GetEntProp(entity, Prop_Send, "m_iItemIDLow"));
+// 	SetEntProp(newent, Prop_Send, "m_iAccountID", GetEntProp(entity, Prop_Send, "m_iAccountID"));
+// 	SetEntProp(newent, Prop_Send, "m_iEntityQuality", GetEntProp(entity, Prop_Send, "m_iEntityQuality"));
+// 	SetEntProp(newent, Prop_Send, "m_bInitialized", GetEntProp(entity, Prop_Send, "m_bInitialized"));
+// 	SetEntProp(newent, Prop_Send, "m_bOnlyIterateItemViewAttributes", GetEntProp(entity, Prop_Send, "m_bOnlyIterateItemViewAttributes"));
+// 	SetEntProp(newent, Prop_Send, "m_iTeamNumber", GetEntProp(entity, Prop_Send, "m_iTeamNumber"));
+// 	float pos[3];
+// 	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+// 	if (IsModelPrecached("models/workshop_partner/weapons/c_models/c_prinny_knife/c_prinny_knife.mdl"))
+// 		SetEntityModel(newent, "models/workshop_partner/weapons/c_models/c_prinny_knife/c_prinny_knife.mdl");
+// 	else PrintToServer ("aw :(");
+// 	TeleportEntity(newent, pos);
+
+// 	SetVariantString("!activator");
+// 	AcceptEntityInput(newent, "SetParent", entity);
+// 	//oh my god holy shit
+// 	SetEntityRenderMode(newent, RENDER_NONE);
+// 	// SetEntPropFloat(newent, Prop_Send, "m_flModelScale", 2.0);
+
+// 	DispatchSpawn(newent);
+// }
 
 // public void OnEntityDestroyed(int entity)
 // {
