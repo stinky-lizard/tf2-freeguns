@@ -3,7 +3,7 @@
 //todo: comment out pragmas b4 release
 #define __freeguns_hud_included
 
-ConVar hudVar, timerVar;
+ConVar hudVar;
 
 #if !defined __freeguns_glow_included
 	bool mapLoaded;
