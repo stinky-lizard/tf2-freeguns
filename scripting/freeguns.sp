@@ -66,7 +66,6 @@ public void OnPluginStart()
 
 	#if defined __freeguns_hud_included
 		hudVar = CreateConVar("sm_freeguns_hud", "0", "Enable/disable custom weapon HUD element. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
-		timerVar = CreateConVar("sm_freeguns_hud_timer", "0.5", "How often (in seconds) to check if a player is looking at a weapon. Make smaller to make it look nicer, but very expensive!!!", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD, true, 0.1);
 	#endif
 
 	GameData hGameConf = new GameData("tf2.freeguns");
