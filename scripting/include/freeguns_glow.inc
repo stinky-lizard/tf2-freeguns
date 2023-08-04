@@ -13,7 +13,7 @@
 	//if hud included is already defined, then these are already declared/defined there
 	//usually glow would be included first, but if it's included second then hud would have already done this
 
-ConVar glowVar;
+ConVar glowVar, glowTimerVar;
 //I wished there's a more elegant solution than this, but it seems that's all for naught :(
 ArrayList allGlowEntities;
 
@@ -71,7 +71,7 @@ void GlowOnEntityCreated(int weaponEnt, const char[] classname)
 	SetEdictFlags(glowEnt.entRef, GetEdictFlags(glowEnt.entRef) & ~FL_EDICT_ALWAYS);
 	SDKHook(glowEnt.entRef, SDKHook_SetTransmit, OnGlowTransmit);
 
-	CreateTimer(0.5, CalculateLineOfSight, glowEnt.entRef, TIMER_REPEAT);
+	CreateTimer(glowTimerVar.FloatValue, CalculateLineOfSight, glowEnt.entRef, TIMER_REPEAT);
 }
 
 Action CalculateLineOfSight(Handle timer, int glowEntRef)
