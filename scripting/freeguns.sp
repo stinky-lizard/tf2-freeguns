@@ -38,8 +38,8 @@ KeyValues savedData;
 
 ConVar enabledVar;
 
-// #include <freeguns_glow>
-#include <freeguns_hud>
+#include <freeguns_glow>
+// #include <freeguns_hud>
 // #define DEBUG
 
 public void OnEntityCreated(int entity, const char[] classname)
