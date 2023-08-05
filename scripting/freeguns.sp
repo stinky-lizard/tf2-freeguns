@@ -39,7 +39,7 @@ KeyValues savedData;
 ConVar enabledVar;
 
 #include <freeguns_glow>
-// #include <freeguns_hud>
+#include <freeguns_hud>
 // #define DEBUG
 
 public void OnEntityCreated(int entity, const char[] classname)
@@ -66,7 +66,7 @@ public void OnPluginStart()
 	#endif
 
 	#if defined __freeguns_hud_included
-		hudVar = CreateConVar("sm_freeguns_hud", "0", "Enable/disable custom weapon HUD element. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
+		hudVar = CreateConVar("sm_freeguns_hud", "1", "Enable/disable custom weapon HUD element. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	#endif
 
 	GameData hGameConf = new GameData("tf2.freeguns");
