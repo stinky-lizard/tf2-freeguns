@@ -60,8 +60,8 @@ public void OnPluginStart()
 	enabledVar = CreateConVar("sm_freeguns_enabled", "1", "Enable/disable Freeguns. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
 
 	#if defined __freeguns_glow_included
-		glowVar = CreateConVar("sm_freeguns_glow", "0", "Enable/disable custom weapon glow. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
-		glowTimerVar = CreateConVar("sm_freeguns_glow_timer", "0.5", "How often (in seconds) to update weapon glows. Make smaller to make it look nicer, or make larger to help with performance.", FCVAR_REPLICATED|FCVAR_NOTIFY, true, 0.1);
+		glowVar = CreateConVar("sm_freeguns_glow", "1", "Enable/disable custom weapon glow. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
+		glowTimerVar = CreateConVar("sm_freeguns_glow_timer", "0.3", "How often (in seconds) to update weapon glows. Make smaller to make it look nicer, or make larger to help with performance.", FCVAR_REPLICATED|FCVAR_NOTIFY, true, 0.1);
 		allGlowEntities = new ArrayList(sizeof GlowEntity);
 	#endif
 

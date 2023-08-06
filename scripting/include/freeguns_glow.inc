@@ -1,5 +1,5 @@
-// #pragma semicolon 1
-// #pragma newdecls required
+#pragma semicolon 1
+#pragma newdecls required
 
 #define __freeguns_glow_included
 //This file includes the code to make the glow effect.
@@ -79,15 +79,14 @@ Action CalculateLineOfSight(Handle timer, int glowEntRef)
 	GlowEntity glowEnt;
 	int glowEntArrIndex;
 
+	//have to get the GlowEntity from its ref bc it may have changed
+
 	if (!GetGlowEntOfEntRef(glowEntRef, glowEnt, glowEntArrIndex))
 		//there's no GlowEntity, so we don't have anywhere to put the players with sight.
 		return Plugin_Stop;
 
 	if (!IsValidEntity(glowEntRef))
 	{
-		// glowEnt.entRef = 0;	//unneeded?
-		// glowEnt.parentRef = 0;
-		// for (int i = 0; i < sizeof glowEnt.playersWithSight; i++) { glowEnt.playersWithSight[i] = 0; }
 		allGlowEntities.Erase(glowEntArrIndex);
 		return Plugin_Stop;
 	}
@@ -105,44 +104,23 @@ Action CalculateLineOfSight(Handle timer, int glowEntRef)
 
 		Handle hTrace = TR_TraceRayFilterEx(eyepos, glowpos, MASK_SOLID, RayType_EndPoint, ClientViewsFilter);
 
-		//// int rayHit = TR_GetEntityIndex(hTrace);
-		//// char rayHitClass[64];
-		//// if (IsValidEntity(rayHit))
-		//// {
-		//// 	GetEntityClassname(rayHit, rayHitClass, sizeof rayHitClass);
-		//// 	PrintToServer("Ray hit %i, %s", rayHit, rayHitClass);
-		//// }
-		//// else PrintToServer("Ray hit nothing");
-		if (TR_GetEntityIndex(hTrace) == EntRefToEntIndex(glowEnt.parentRef))
+		int entindex = TR_GetEntityIndex(hTrace);
+		if (entindex == -1)
 		{
-			//the ray hit the weapon first, not the world, so they have LOS
-			////PrintToServer("%i does have sight", client);
-			int userid = GetClientUserId(client);
-
-			//sanity check
-			if (userid == 0) { LogError("Bad news: UserID of client %i is 0!", client); delete hTrace; continue; }
-			if (FindClientInSightArray(glowEnt, client) == -1)
-			{
-
-				for (int i = 0; i < sizeof glowEnt.playersWithSight; i++)
-				{
-					if (glowEnt.playersWithSight[i] == 0)
-					{
-						////PrintToServer("Adding them to index %i", i);
-						glowEnt.playersWithSight[i] = userid;
-						break;
-					}
-				}
-			}
+			//the ray didn't find anything. but it didn't find the worldspawn, so it prob just didnt reach the weapon
+			RayHitWeapon(client, glowEnt);
+		}
+		else if (entindex == EntRefToEntIndex(glowEnt.parentRef))
+		{
+			RayHitWeapon(client, glowEnt);
 		}
 		else
 		{
-			//// PrintToServer("%i does not have sight", client);
-			//if it hit, they don't have sight
+			//if this hit, they don't have sight
 			int index = FindClientInSightArray(glowEnt, client);
 			if (index != -1)
 			{
-				////PrintToServer("Removing them from index %i", index);
+
 				glowEnt.playersWithSight[index] = 0;
 
 			}
@@ -157,6 +135,27 @@ Action CalculateLineOfSight(Handle timer, int glowEntRef)
 	return Plugin_Continue;
 }
 
+void RayHitWeapon(int client, GlowEntity glowEnt)
+{
+	//the ray hit the weapon first, not the world, so they have LOS
+	int userid = GetClientUserId(client);
+
+	//sanity check
+	if (userid == 0) { LogError("Bad news: UserID of client %i is 0!", client); return; }
+	if (FindClientInSightArray(glowEnt, client) == -1)
+	{
+
+		for (int i = 0; i < sizeof glowEnt.playersWithSight; i++)
+		{
+			if (glowEnt.playersWithSight[i] == 0)
+			{
+				glowEnt.playersWithSight[i] = userid;
+				break;
+			}
+		}
+	}
+}
+
 Action OnGlowTransmit(int glowEntIndex, int client)
 {
 	SetEdictFlags(glowEntIndex, GetEdictFlags(glowEntIndex) & ~FL_EDICT_ALWAYS);
@@ -165,6 +164,7 @@ Action OnGlowTransmit(int glowEntIndex, int client)
 	//May be incredibly resource intensive...
 
 	SetVariantString("190 197 40 255");
+
 
 	GlowEntity glowEnt;
 	int unneeded;

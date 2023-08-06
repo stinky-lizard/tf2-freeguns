@@ -1,6 +1,7 @@
 #pragma newdecls required
 #pragma semicolon 1
-//todo: comment out pragmas b4 release
+
+
 #define __freeguns_hud_included
 
 ConVar hudVar;
@@ -11,7 +12,7 @@ ConVar hudVar;
 	public void OnMapEnd() { mapLoaded = false; }
 #endif
 
-#define WORLDTEXTHEIGHT 40.0
+#define WORLDTEXTHEIGHT 30.0
 
 void HudOnEntityCreated(int entity, const char[] classname)
 {
@@ -25,7 +26,7 @@ void DroppedWeaponNextFrame(int entityref)
 {
 	int worldtext = CreateEntityByName("point_worldtext");
 
-	char messagetext[256], clientname[MAX_NAME_LENGTH], qualityname[16], itemname[64];
+	char messagetext[256], topspacer[32], bottomspacer[32], clientname[MAX_NAME_LENGTH], qualityname[16], itemname[64];
 
 	TF2Econ_GetQualityName(GetEntProp(entityref, Prop_Send, "m_iEntityQuality"), qualityname, sizeof qualityname);
 	qualityname[0] = CharToUpper(qualityname[0]);
@@ -47,22 +48,46 @@ void DroppedWeaponNextFrame(int entityref)
 	}
 
 	if (GetEntProp(entityref, Prop_Send, "m_iEntityQuality") == 0)
-		Format(messagetext, sizeof messagetext, "Press Action Button (def. H) to pick up\n%s's %s!", clientname, itemname);
+	{
+		int len = strlen(clientname) + strlen(itemname) + 4; //[clientname]'s [itemname]!
+		CreateSpacers(len, topspacer, bottomspacer);
+		Format(messagetext, sizeof messagetext, "%sPress Action Button (def. H) to pick up\n%s%s's %s!", topspacer, bottomspacer, clientname, itemname);
+	}
 	else
-		Format(messagetext, sizeof messagetext, "Press Action Button (def. H) to pick up\n%s's %s %s!", clientname, qualityname, itemname);
+	{
+		int len = strlen(clientname) + strlen(qualityname) + strlen(itemname) + 5;
+		CreateSpacers(len, topspacer, bottomspacer);
+		Format(messagetext, sizeof messagetext, "%sPress Action Button (def. H) to pick up\n%s%s's %s %s!", topspacer, bottomspacer, clientname, qualityname, itemname);
+	}
 
 	DispatchKeyValue(worldtext, "message", messagetext);
 	SetVariantString("!activator");
 	AcceptEntityInput(worldtext, "SetParent", entityref);
 	SetEntPropVector(worldtext, Prop_Send, "m_vecOrigin", {0.0, 0.0, WORLDTEXTHEIGHT});
 	DispatchKeyValueInt(worldtext, "font", 8);
-	DispatchKeyValueInt(worldtext, "textsize", 6);
+	DispatchKeyValueInt(worldtext, "textsize", 4);
 	DispatchKeyValueInt(worldtext, "orientation", 1);
 	DispatchKeyValue(worldtext, "color", "255 255 0 255");
 	DispatchSpawn(worldtext);
 
 	SDKHook(worldtext, SDKHook_SetTransmit, OnHudTransmit);
 
+}
+
+void CreateSpacers(int bottomlen, char[] topspacer, char[] bottomspacer)
+{
+	int toplen = strlen("Press Action Button (def. H) to pick up");
+
+	if (bottomlen > toplen)
+	{
+		for (int i = 0; i < (bottomlen - toplen) / 2 && i < 32; i++)
+			topspacer[i] = ' ';
+	}
+	else if (bottomlen < toplen)
+	{
+		for (int i = 0; i < (toplen - bottomlen) / 2 && i < 32; i++)
+			bottomspacer[i] = ' ';
+	}
 }
 
 Action OnHudTransmit(int worldtext, int client)
