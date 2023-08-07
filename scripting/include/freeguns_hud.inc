@@ -106,10 +106,10 @@ Action OnHudTransmit(int worldtext, int client)
 	else return Plugin_Handled;
 }
 
-float lastTimeMoved;
 
 void MoveWorldtextAboveParent(int worldtext, int weapon)
 {
+	static float lastTimeMoved;
 	if (GetGameTime() > lastTimeMoved + 0.2)
 	{
 		lastTimeMoved = GetGameTime();
