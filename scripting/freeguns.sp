@@ -7,7 +7,7 @@
 #include <sdkhooks>
 
 
-#define PLUGIN_VERSION "1.1.1"
+#define PLUGIN_VERSION "1.1.2"
 
 public Plugin myinfo =
 {
