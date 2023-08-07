@@ -108,7 +108,7 @@ Action OnHudTransmit(int worldtext, int client)
 
 
 void MoveWorldtextAboveParent(int worldtext, int weapon)
-{
+{	
 	static float lastTimeMoved;
 	if (GetGameTime() > lastTimeMoved + 0.2)
 	{
@@ -135,6 +135,7 @@ bool CanClientPickUpWeapon(int client, int weapon)
 
 bool IsClientInRange(int client, int weapon)
 {
+	if (!IsValidEntity(weapon) || !IsValidEntity(client)) return false;
 	float clientPos[3], weaponPos[3];
 
 	GetClientEyePosition(client, clientPos);
