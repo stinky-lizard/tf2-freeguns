@@ -67,6 +67,7 @@ public void OnPluginStart()
 
 	#if defined __freeguns_hud_included
 		hudVar = CreateConVar("sm_freeguns_hud", "1", "Enable/disable custom weapon HUD element. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
+		LoadTranslations("freeguns.phrases");
 	#endif
 
 	GameData hGameConf = new GameData("tf2.freeguns");

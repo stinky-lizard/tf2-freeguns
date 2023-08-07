@@ -1,0 +1,107 @@
+"Phrases"
+{
+	"TF_WEAPON_BAT"
+	{
+		"en"	"Bat"
+	}
+	"TF_WEAPON_BOTTLE"
+	{
+		"en"	"Bottle"
+	}
+	"TF_WEAPON_FIREAXE"
+	{
+		"en"	"Fire Axe"
+	}
+	"TF_WEAPON_CLUB"
+	{
+		"en"	"Kukri"
+	}
+	"TF_WEAPON_KNIFE"
+	{
+		"en"	"Knife"
+	}
+	"TF_WEAPON_FISTS"
+	{
+		"en"	"Fists"
+	}
+	"TF_WEAPON_SHOVEL"
+	{
+		"en"	"Shovel"
+	}
+	"TF_WEAPON_WRENCH"
+	{
+		"en"	"Wrench"
+	}
+	"TF_WEAPON_BONESAW"
+	{
+		"en"	"Bonesaw"
+	}
+	"TF_WEAPON_SHOTGUN_PRIMARY"
+	{
+		"en"	"Shotgun"
+	}
+	"TF_WEAPON_SHOTGUN_SOLDIER"
+	{
+		"en"	"Shotgun"
+	}
+	"TF_WEAPON_SHOTGUN_HWG"
+	{
+		"en"	"Shotgun"
+	}
+	"TF_WEAPON_SHOTGUN_PYRO"
+	{
+		"en"	"Shotgun"
+	}
+	"TF_WEAPON_SCATTERGUN"
+	{
+		"en"	"Scattergun"
+	}
+	"TF_WEAPON_SNIPERRIFLE"
+	{
+		"en"	"Sniper Rifle"
+	}
+	"TF_WEAPON_MINIGUN"
+	{
+		"en"	"Minigun"
+	}
+	"TF_WEAPON_SMG"
+	{
+		"en"	"SMG"
+	}
+	"TF_WEAPON_SYRINGEGUN_MEDIC"
+	{
+		"en"	"Syringe Gun"
+	}
+	"TF_WEAPON_ROCKETLAUNCHER"
+	{
+		"en"	"Rocket Launcher"
+	}
+	"TF_WEAPON_GRENADELAUNCHER"
+	{
+		"en"	"Grenade Launcher"
+	}
+	"TF_WEAPON_PIPEBOMBLAUNCHER"
+	{
+		"en"	"Stickybomb Launcher"
+	}
+	"TF_WEAPON_FLAMETHROWER"
+	{
+		"en"	"Flamethrower"
+	}
+	"TF_WEAPON_PISTOL"
+	{
+		"en"	"Pistol"
+	}
+	"TF_WEAPON_PISTOL_SCOUT"
+	{
+		"en"	"Pistol"
+	}
+	"TF_WEAPON_REVOLVER"
+	{
+		"en"	"Revolver"
+	}
+	"TF_WEAPON_MEDIGUN"
+	{
+		"en"	"Medigun"
+	}
+}

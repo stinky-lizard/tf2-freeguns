@@ -33,7 +33,11 @@ void DroppedWeaponNextFrame(int entityref)
 
 	TF2Econ_GetItemName(GetEntProp(entityref, Prop_Send, "m_iItemDefinitionIndex"), itemname, sizeof itemname);
 
-	//remove The at the beginning of weapons
+	if (StrContains(itemname, "TF_") == 0)
+		//it doesn't have a name in items_game
+		Format(itemname, sizeof itemname, "%T", itemname, LANG_SERVER);
+
+	//remove The at the beginning of weapon names
 	if (StrContains(itemname, "the", false) == 0)
 		ReplaceStringEx(itemname, sizeof itemname, "the ", "", _, _, false);
 
