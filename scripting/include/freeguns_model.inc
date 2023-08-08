@@ -8,8 +8,30 @@
  * Separated for cleanliness.
  */
 
+ConVar modelVar;
+
+int viewmodelWearables[MAXPLAYERS];
+
 void SetPlayerModelFromWeapon(int client, int weapon)
 {
+	if (!IsValidEntity(client) || !IsValidEntity(weapon)) return;
+	
+	char currentModel[32];
+	GetClientModel(client, currentModel, sizeof currentModel);
+	char classnameString[32];
+
+	strcopy(classnameString, sizeof classnameString, currentModel);
+	ReplaceString(classnameString, sizeof classnameString, "models/player/", "", false);
+	ReplaceString(classnameString, sizeof classnameString, ".mdl", "", false);
+
+	TFClassType currentClassLook = TF2_GetClass(classnameString);
+
+	if (TF2Econ_GetItemLoadoutSlot(GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex"), currentClassLook) != -1)
+	{
+		//this weapon works with what they look like! dont need to do anything
+		return;
+	}
+
 	int unneeded;
 	TFClassType desiredClass = GetClassOfWeapon(weapon, unneeded);
 
@@ -36,8 +58,39 @@ void SetPlayerModelFromWeapon(int client, int weapon)
 			classModelPath = "models/player/spy.mdl";
 	}
 
+	if (StrEqual(currentModel, classModelPath, false)) return; //dont need to do anything. already taken up enough processing time
+
 	SetVariantString(classModelPath);
 	AcceptEntityInput(client, "SetCustomModel");
 	SetEntProp(client, Prop_Send, "m_bUseClassAnimations", 1);
-		
+
+}
+
+void OnClientWeaponSwitch(int client, int newWeapon)
+{
+	if (modelVar.BoolValue)
+		SetPlayerModelFromWeapon(client, newWeapon);
+}
+
+public void OnClientPutInServer(int client)
+{
+	SDKHook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitch);
+}
+
+public void OnClientDisconnect(int client)
+{
+	SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitch);
+	if (IsValidEntity(viewmodelWearables[client])) RemoveEntity(viewmodelWearables[client]);
+	viewmodelWearables[client] = 0;
+}
+
+public void OnPluginEnd()
+{
+	for (int client = 1; client < MaxClients; client++)
+	{
+		if (!IsClientInGame(client)) continue;
+		SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitch);
+		if (IsValidEntity(viewmodelWearables[client])) RemoveEntity(viewmodelWearables[client]);
+		viewmodelWearables[client] = 0;
+	}
 }

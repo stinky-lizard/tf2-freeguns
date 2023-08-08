@@ -67,8 +67,17 @@ public void OnPluginStart()
 	#endif
 
 	#if defined __freeguns_hud_included
-		hudVar = CreateConVar("sm_freeguns_hud", "1", "Enable/disable custom weapon HUD element. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
+		hudVar = CreateConVar("sm_freeguns_hud", "1", "Enable/disable custom weapon HUD element. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
 		LoadTranslations("freeguns.phrases");
+	#endif
+
+	#if defined __freeguns_model_included
+		modelVar = CreateConVar("sm_freeguns_model", "1", "Enable/disable model switching when changing weapons. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
+		for (int i = 1; i < MaxClients; i++)
+		{
+			if (!IsClientInGame(i)) continue;
+			SDKHook(i, SDKHook_WeaponSwitchPost, OnClientWeaponSwitch);
+		}
 	#endif
 
 	GameData hGameConf = new GameData("tf2.freeguns");
@@ -178,9 +187,6 @@ MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hPar
 	int iWeaponEnt = GetEntityFromAddress(weaponMemAddress);
 	SaveClasses(iPlayer, iWeaponEnt);
 
-	#if defined __freeguns_model_included
-		SetPlayerModelFromWeapon(iPlayer, iWeaponEnt);
-	#endif
 
 	#if defined DEBUG
 		PrintToServer("CanPickPre: Switch to desired class (%i)", GetSavedClass(iPlayer, "DesiredClass"));
