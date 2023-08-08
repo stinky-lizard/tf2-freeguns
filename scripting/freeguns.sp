@@ -76,7 +76,7 @@ public void OnPluginStart()
 		for (int i = 1; i < MaxClients; i++)
 		{
 			if (!IsClientInGame(i)) continue;
-			SDKHook(i, SDKHook_WeaponSwitchPost, OnClientWeaponSwitch);
+			SDKHook(i, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 		}
 	#endif
 
