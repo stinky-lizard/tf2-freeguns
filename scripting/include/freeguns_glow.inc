@@ -158,6 +158,7 @@ void RayHitWeapon(int client, GlowEntity glowEnt)
 
 Action OnGlowTransmit(int glowEntIndex, int client)
 {
+	if (!IsValidEntity(glowEntIndex) || !IsValidEntity(client))	return Plugin_Continue; //just let it be
 	SetEdictFlags(glowEntIndex, GetEdictFlags(glowEntIndex) & ~FL_EDICT_ALWAYS);
 
 	//This is where we disable certain players from seeing it.

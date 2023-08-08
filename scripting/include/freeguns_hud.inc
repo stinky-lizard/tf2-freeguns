@@ -96,7 +96,14 @@ void CreateSpacers(int bottomlen, char[] topspacer, char[] bottomspacer)
 
 Action OnHudTransmit(int worldtext, int client)
 {
+	if (!IsValidEntity(worldtext) || !IsValidEntity(client)) return Plugin_Continue; //whatever
 	int weapon = GetEntPropEnt(worldtext, Prop_Data, "m_hParent");
+
+	if (!IsValidEntity(weapon))
+	{
+		//somehow this worldtext has no parent. no reason to keep it around
+		RemoveEntity(worldtext);
+	}
 
 	if (CanClientPickUpWeapon(client, weapon))
 	{
