@@ -7,7 +7,7 @@
 #include <sdkhooks>
 
 
-#define PLUGIN_VERSION "1.1.3"
+#define PLUGIN_VERSION "1.2.0-beta"
 
 public Plugin myinfo =
 {
@@ -40,6 +40,7 @@ ConVar enabledVar;
 
 #include <freeguns_glow>
 #include <freeguns_hud>
+#include <freeguns_model>
 // #define DEBUG
 
 public void OnEntityCreated(int entity, const char[] classname)
@@ -176,6 +177,10 @@ MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hPar
 	Address weaponMemAddress = hParams.GetAddress(1);
 	int iWeaponEnt = GetEntityFromAddress(weaponMemAddress);
 	SaveClasses(iPlayer, iWeaponEnt);
+
+	#if defined __freeguns_model_included
+		SetPlayerModelFromWeapon(iPlayer, iWeaponEnt);
+	#endif
 
 	#if defined DEBUG
 		PrintToServer("CanPickPre: Switch to desired class (%i)", GetSavedClass(iPlayer, "DesiredClass"));
