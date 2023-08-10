@@ -10,38 +10,9 @@
 
 ConVar modelVar;
 
-int viewmodelWearables[MAXPLAYERS];
-
-// #define DEBUG3
-
-#define EF_NODRAW 0x020    // don't draw entity
-#if defined DEBUG3
-	Action DeleteWearableTimer(Handle timer, int wearableRef)
-	{
-		if (IsValidEntity(wearableRef)) RemoveEntity(wearableRef);
-		return Plugin_Handled;
-	}
-	#define EF_BONEMERGE 0x001
-	#define EF_BONEMERGE_FASTCULL 0x080
-#endif
-
 Action SetPlayerModelFromWeapon(int client, int weapon)
 {
 	if (!IsValidEntity(client) || !IsValidEntity(weapon)) return Plugin_Continue;
-#if defined DEBUG3
-	int clientViewModelWearable = CreateEntityByName("tf_wearable_vm");
-	SetEntPropEnt(clientViewModelWearable, Prop_Send, "m_hOwnerEntity", client);
-	SetEntProp(clientViewModelWearable, Prop_Send, "m_iTeamNum", view_as<int>(TF2_GetClientTeam(client)));
-	DispatchKeyValueVector(clientViewModelWearable, "origin", {0.0,0.0,0.0});
-	SetVariantString("!activator");
-	AcceptEntityInput(clientViewModelWearable, "SetParent", client);
-	// SetEntityModel(clientViewModelWearable, "models/weapons/c_models/c_heavy_arms.mdl");
-	SetEntProp(clientViewModelWearable, Prop_Send, "m_nModelIndex", PrecacheModel("models/weapons/c_models/c_pyro_arms.mdl"));
-	SetEntProp(clientViewModelWearable, Prop_Send, "m_bValidatedAttachedEntity", true);
-	// SetEntProp(clientViewModelWearable, Prop_Send, "m_fEffects", EF_BONEMERGE | EF_BONEMERGE_FASTCULL);
-	DispatchSpawn(clientViewModelWearable);
-	CreateTimer(5.0, DeleteWearableTimer, EntIndexToEntRef(clientViewModelWearable));
-#endif
 
 	char currentModel[32];
 	GetClientModel(client, currentModel, sizeof currentModel);
@@ -76,22 +47,6 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 	AcceptEntityInput(client, "SetCustomModel");
 	SetEntProp(client, Prop_Send, "m_bUseClassAnimations", 1);
 
-
-	// int viewmodel = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
-	// char str[128];
-	// GetEntPropString(viewmodel, Prop_Data, "m_ModelName", str, sizeof str);
-
-	// //for some reason, we have to set the WEAPON model to the HANDS model. weird.
-	// //but we have to do it in the post hook. UpdateHands is called in the WeaponSwitch, and will undo our work.
-	// // SetEntityModel(weapon, str);
-	// // PrintToServer("%s", str);
-	// // SetEntProp(viewmodel, Prop_Send, "m_fEffects", GetEntProp(viewmodel, Prop_Send, "m_fEffects") | EF_NODRAW);
-
-	// //kinda works bot not really
-	// // char weaponmodel[PLATFORM_MAX_PATH];
-	// // GetEntPropString(weapon, Prop_Data, "m_ModelName", weaponmodel, sizeof weaponmodel);
-	// SetEntityModel(viewmodel, viewmodelPath);
-
 	return Plugin_Continue;
 }
 
@@ -102,37 +57,15 @@ Action OnClientWeaponSwitch(int client, int weapon)
 	else return Plugin_Continue;
 }
 
-void OnClientWeaponSwitchPost(int client, int weapon)
-{
-	if (modelVar.BoolValue)
-	{
-		int unneeded;
-		TFClassType desiredClass = GetClassOfWeapon(weapon, unneeded);
-
-		char classModelPath[32];
-		char viewmodelPath[64];
-		GetModelOfClass(desiredClass, classModelPath, sizeof classModelPath, viewmodelPath, sizeof viewmodelPath);
-
-		int viewmodel = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
-		// GetEntPropString(viewmodel, Prop_Data, "m_ModelName", str, sizeof str);
-		// SetEntityModel(weapon, viewmodelPath);
-
-		int seq = GetEntProp(viewmodel, Prop_Send, "m_nSequence");
-		SetEntityModel(viewmodel, viewmodelPath);
-		SetEntProp(viewmodel, Prop_Send, "m_nSequence", seq);
-	}
-}
 
 public void OnClientPutInServer(int client)
 {
 	SDKHook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
-	SDKHook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
 }
 
 public void OnClientDisconnect(int client)
 {
 	SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
-	SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
 	if (viewmodelWearables[client] != 0 && IsValidEntity(viewmodelWearables[client])) RemoveEntity(viewmodelWearables[client]);
 	viewmodelWearables[client] = 0;
 }
@@ -143,9 +76,9 @@ public void OnPluginEnd()
 	{
 		if (!IsClientInGame(client)) continue;
 		SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
-		SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
-		if (viewmodelWearables[client] != 0 && IsValidEntity(viewmodelWearables[client])) RemoveEntity(viewmodelWearables[client]);
-		viewmodelWearables[client] = 0;
+		SetVariantString("");
+		AcceptEntityInput(client, "SetCustomModel");
+		SetEntProp(client, Prop_Send, "m_bUseClassAnimations", 1);
 	}
 }
 

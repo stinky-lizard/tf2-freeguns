@@ -7,7 +7,7 @@
 #include <sdkhooks>
 
 
-#define PLUGIN_VERSION "1.2.0-beta"
+#define PLUGIN_VERSION "1.2.0"
 
 public Plugin myinfo =
 {
@@ -77,7 +77,6 @@ public void OnPluginStart()
 		{
 			if (!IsClientInGame(i)) continue;
 			SDKHook(i, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
-			SDKHook(i, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
 		}
 	#endif
 
