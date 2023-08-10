@@ -66,8 +66,6 @@ public void OnClientPutInServer(int client)
 public void OnClientDisconnect(int client)
 {
 	SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
-	if (viewmodelWearables[client] != 0 && IsValidEntity(viewmodelWearables[client])) RemoveEntity(viewmodelWearables[client]);
-	viewmodelWearables[client] = 0;
 }
 
 public void OnPluginEnd()
