@@ -24,14 +24,20 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 
 	TFClassType currentClassLook = TF2_GetClass(classnameString);
 
+	bool origClass = false;
 	if (TF2Econ_GetItemLoadoutSlot(GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex"), currentClassLook) != -1)
 	{
 		//this weapon works with what they look like! dont need to do anything
-		return Plugin_Continue;
+		if (TF2Econ_GetItemLoadoutSlot(GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex"), TF2_GetPlayerClass(client)) != -1)
+		{
+			//if the weapon also works with the player's native class, then switch back to that for this
+			origClass = true;
+		}
+		else return Plugin_Continue;
 	}
 
 	int unneeded;
-	TFClassType desiredClass = GetClassOfWeapon(weapon, unneeded);
+	TFClassType desiredClass = origClass ?  TF2_GetPlayerClass(client) : GetClassOfWeapon(weapon, unneeded);
 
 
 	char classModelPath[32];
@@ -41,7 +47,7 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 	if (StrEqual(currentModel, classModelPath, false)) return Plugin_Continue; //dont need to do anything. already taken up enough processing time
 
 	if (!IsModelPrecached(classModelPath)) PrecacheModel(classModelPath);
-	if (!IsModelPrecached(viewmodelPath)) PrecacheModel(viewmodelPath);
+	// if (!IsModelPrecached(viewmodelPath)) PrecacheModel(viewmodelPath);
 
 	SetVariantString(classModelPath);
 	AcceptEntityInput(client, "SetCustomModel");
