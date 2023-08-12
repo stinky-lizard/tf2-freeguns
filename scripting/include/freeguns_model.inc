@@ -10,8 +10,6 @@
 
 ConVar modelVar;
 
-int viewmodelWearableRefs[MAXPLAYERS][2];
-
 // #define DEBUG3
 
 #define EF_NODRAW 0x020    // don't draw entity
@@ -121,36 +119,6 @@ void OnClientWeaponSwitchPost(int client, int weapon)
 	SetEntityModel(viewmodel, viewmodelPath);
 	SetEntProp(viewmodel, Prop_Send, "m_nSequence", seq);
 
-	//hide viewmodel to get rid of flickering
-	SetEntProp(viewmodel, Prop_Send, "m_fEffects", GetEntProp(viewmodel, Prop_Send, "m_fEffects") | EF_NODRAW);
-
-	//re-add viewmodel w/o flickering
-
-	int wearable = viewmodelWearableRefs[client][0];
-	if (!IsValidEntity(EntRefToEntIndex(wearable)) || wearable == 0) //0 = uninitialized
-	{
-		wearable = CreateEntityByName("tf_wearable_vm");
-		viewmodelWearableRefs[client][0] = EntIndexToEntRef(wearable);
-		DispatchSpawn(wearable);
-	}
-	SDKCall(hSDKCallEquipWearable, client, wearable);
-	SetEntityModel(wearable, viewmodelPath);
-	SetEntProp(wearable, Prop_Send, "m_bValidatedAttachedEntity", true);
-
-	char weaponModelPath[PLATFORM_MAX_PATH];
-	GetEntPropString(weapon, Prop_Data, "m_ModelName", weaponModelPath, sizeof weaponModelPath);
-	weaponModelPath = "";
-	int weaponWearable = viewmodelWearableRefs[client][1];
-	if (!IsValidEntity(EntRefToEntIndex(weaponWearable)) || weaponWearable == 0)
-	{
-		weaponWearable = CreateEntityByName("tf_wearable_vm");
-		viewmodelWearableRefs[client][1] = EntIndexToEntRef(weaponWearable);
-		DispatchSpawn(weaponWearable);
-	}
-	SDKCall(hSDKCallEquipWearable, client, weaponWearable);
-	SetEntityModel(weaponWearable, weaponModelPath);
-	SetEntProp(weaponWearable, Prop_Send, "m_bValidatedAttachedEntity", true);
-
 }
 
 public void OnClientPutInServer(int client)
@@ -165,16 +133,6 @@ public void OnClientDisconnect(int client)
 	SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 	SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
 
-	DeleteWearables(client);
-}
-
-void DeleteWearables(int client)
-{
-	if (viewmodelWearableRefs[client][0] != 0 && IsValidEntity(viewmodelWearableRefs[client][0])) RemoveEntity(viewmodelWearableRefs[client][0]);
-	if (viewmodelWearableRefs[client][1] != 0 && IsValidEntity(viewmodelWearableRefs[client][1])) RemoveEntity(viewmodelWearableRefs[client][1]);
-	viewmodelWearableRefs[client][0] = 0;
-	viewmodelWearableRefs[client][1] = 0;
-
 }
 
 public void OnPluginEnd()
@@ -185,7 +143,6 @@ public void OnPluginEnd()
 		SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 		SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
 
-		DeleteWearables(client);
 	}
 }
 
