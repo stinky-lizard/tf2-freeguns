@@ -10,37 +10,9 @@
 
 ConVar modelVar;
 
-// #define DEBUG3
-
-#define EF_NODRAW 0x020    // don't draw entity
-#define EF_PARENT_ANIMATES 0x200    // don't draw entity
-#if defined DEBUG3
-	Action DeleteWearableTimer(Handle timer, int wearableRef)
-	{
-		if (IsValidEntity(wearableRef)) RemoveEntity(wearableRef);
-		return Plugin_Handled;
-	}
-	#define EF_BONEMERGE 0x001
-	#define EF_BONEMERGE_FASTCULL 0x080
-#endif
-
 Action SetPlayerModelFromWeapon(int client, int weapon)
 {
 	if (!IsValidEntity(client) || !IsValidEntity(weapon)) return Plugin_Continue;
-#if defined DEBUG3
-	int clientViewModelWearable = CreateEntityByName("tf_wearable_vm");
-	SetEntPropEnt(clientViewModelWearable, Prop_Send, "m_hOwnerEntity", client);
-	SetEntProp(clientViewModelWearable, Prop_Send, "m_iTeamNum", view_as<int>(TF2_GetClientTeam(client)));
-	DispatchKeyValueVector(clientViewModelWearable, "origin", {0.0,0.0,0.0});
-	SetVariantString("!activator");
-	AcceptEntityInput(clientViewModelWearable, "SetParent", client);
-	// SetEntityModel(clientViewModelWearable, "models/weapons/c_models/c_heavy_arms.mdl");
-	SetEntProp(clientViewModelWearable, Prop_Send, "m_nModelIndex", PrecacheModel("models/weapons/c_models/c_pyro_arms.mdl"));
-	SetEntProp(clientViewModelWearable, Prop_Send, "m_bValidatedAttachedEntity", true);
-	// SetEntProp(clientViewModelWearable, Prop_Send, "m_fEffects", EF_BONEMERGE | EF_BONEMERGE_FASTCULL);
-	DispatchSpawn(clientViewModelWearable);
-	CreateTimer(5.0, DeleteWearableTimer, EntIndexToEntRef(clientViewModelWearable));
-#endif
 
 	char currentModel[32];
 	GetClientModel(client, currentModel, sizeof currentModel);
@@ -75,6 +47,7 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 
 	if (!IsModelPrecached(worldmodelPath)) PrecacheModel(worldmodelPath);
 	if (!IsModelPrecached(viewmodelPath)) PrecacheModel(viewmodelPath);
+
 
 	SetVariantString(worldmodelPath);
 	AcceptEntityInput(client, "SetCustomModel");
@@ -135,7 +108,6 @@ public void OnGameFrame()
 public void OnClientPutInServer(int client)
 {
 	SDKHook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
-	SDKHook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
 }
 
 public void OnClientDisconnect(int client)
@@ -151,7 +123,6 @@ public void OnPluginEnd()
 		if (!IsClientInGame(client)) continue;
 		SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 		SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
-
 	}
 }
 
