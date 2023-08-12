@@ -48,7 +48,6 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 	if (!IsModelPrecached(worldmodelPath)) PrecacheModel(worldmodelPath);
 	if (!IsModelPrecached(viewmodelPath)) PrecacheModel(viewmodelPath);
 
-
 	SetVariantString(worldmodelPath);
 	AcceptEntityInput(client, "SetCustomModel");
 	SetEntProp(client, Prop_Send, "m_bUseClassAnimations", 1);
@@ -62,11 +61,6 @@ Action OnClientWeaponSwitch(int client, int weapon)
 		return SetPlayerModelFromWeapon(client, weapon);
 	else return Plugin_Continue;
 }
-
-char myModel[PLATFORM_MAX_PATH];
-bool doIt;
-float myTime;
-
 
 void OnClientWeaponSwitchPost(int client, int weapon)
 {
@@ -87,22 +81,6 @@ void OnClientWeaponSwitchPost(int client, int weapon)
 	int seq = GetEntProp(viewmodel, Prop_Send, "m_nSequence");
 	SetEntityModel(viewmodel, viewmodelPath);
 	SetEntProp(viewmodel, Prop_Send, "m_nSequence", seq);
-}
-
-public void OnGameFrame()
-{
-	if (!doIt || !IsClientInGame(1)) return;
-	int entity = GetEntPropEnt(1, Prop_Send, "m_hViewModel");
-	if (!IsValidEntity(entity)) return;
-	char model[PLATFORM_MAX_PATH];
-	GetEntPropString(entity, Prop_Data, "m_ModelName", model, sizeof model);
-
-	if (!StrEqual(myModel, model))
-	{
-		PrintToChatAll("%f", GetEngineTime() - myTime);
-		doIt = false;
-	}
-
 }
 
 public void OnClientPutInServer(int client)
