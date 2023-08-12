@@ -88,6 +88,7 @@ public void OnPluginStart()
 	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CBaseEntity::GetBaseEntity");
 	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
 	hSDKCallGetBaseEntity = EndPrepSDKCall();
+	if (!hSDKCallGetBaseEntity) SetFailState("Failed to setup SDKCall for GetBaseEntity. (Error code 101)");
 
 	//TODO: update function signatures and see if they can be made better
 
@@ -273,8 +274,22 @@ MRESReturn GetEntDetour_Post(int iPlayer, DHookReturn hReturn, DHookParam hParam
 
 	TF2_SetPlayerClass(iPlayer, GetSavedClass(iPlayer, "DesiredClass"), _, false);
 
+	#if defined __freeguns_model_included
+		//viewmodel changes back after 1 second, fix that
+		CreateTimer(1.0, PostPickupFixViewmodel, EntIndexToEntRef(iPlayer));
+	#endif
+
 	return MRES_Handled;
 }
+
+#if defined __freeguns_model_included
+	Action PostPickupFixViewmodel(Handle timer, int client)
+	{
+		int weapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+		OnClientWeaponSwitchPost(EntRefToEntIndex(client), weapon);
+		return Plugin_Handled;
+	}
+#endif
 
 int GetEntityFromAddress(Address pEntity)
 {

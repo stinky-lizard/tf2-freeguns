@@ -39,17 +39,17 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 	int unneeded;
 	TFClassType desiredClass = origClass ?  TF2_GetPlayerClass(client) : GetClassOfWeapon(weapon, unneeded);
 
-
-	char classModelPath[32];
+	char worldmodelPath[32];
 	char viewmodelPath[64];
-	GetModelOfClass(desiredClass, classModelPath, sizeof classModelPath, viewmodelPath, sizeof viewmodelPath);
+	GetModelOfClass(desiredClass, worldmodelPath, sizeof worldmodelPath, viewmodelPath, sizeof viewmodelPath);
 
-	if (StrEqual(currentModel, classModelPath, false)) return Plugin_Continue; //dont need to do anything. already taken up enough processing time
+	if (StrEqual(currentModel, worldmodelPath, false)) return Plugin_Continue; //dont need to do anything. already taken up enough processing time
 
-	if (!IsModelPrecached(classModelPath)) PrecacheModel(classModelPath);
-	// if (!IsModelPrecached(viewmodelPath)) PrecacheModel(viewmodelPath);
+	if (!IsModelPrecached(worldmodelPath)) PrecacheModel(worldmodelPath);
+	if (!IsModelPrecached(viewmodelPath)) PrecacheModel(viewmodelPath);
 
-	SetVariantString(classModelPath);
+
+	SetVariantString(worldmodelPath);
 	AcceptEntityInput(client, "SetCustomModel");
 	SetEntProp(client, Prop_Send, "m_bUseClassAnimations", 1);
 
@@ -63,6 +63,47 @@ Action OnClientWeaponSwitch(int client, int weapon)
 	else return Plugin_Continue;
 }
 
+char myModel[PLATFORM_MAX_PATH];
+bool doIt;
+float myTime;
+
+
+void OnClientWeaponSwitchPost(int client, int weapon)
+{
+	if (!modelVar.BoolValue) return;
+
+	int unneeded;
+	TFClassType desiredClass = GetClassOfWeapon(weapon, unneeded);
+
+	char classModelPath[32];
+	char viewmodelPath[64];
+	GetModelOfClass(desiredClass, classModelPath, sizeof classModelPath, viewmodelPath, sizeof viewmodelPath);
+
+	int viewmodel = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
+	// GetEntPropString(viewmodel, Prop_Data, "m_ModelName", str, sizeof str);
+	// SetEntityModel(weapon, viewmodelPath);
+
+	//change viewmodel anims
+	int seq = GetEntProp(viewmodel, Prop_Send, "m_nSequence");
+	SetEntityModel(viewmodel, viewmodelPath);
+	SetEntProp(viewmodel, Prop_Send, "m_nSequence", seq);
+}
+
+public void OnGameFrame()
+{
+	if (!doIt || !IsClientInGame(1)) return;
+	int entity = GetEntPropEnt(1, Prop_Send, "m_hViewModel");
+	if (!IsValidEntity(entity)) return;
+	char model[PLATFORM_MAX_PATH];
+	GetEntPropString(entity, Prop_Data, "m_ModelName", model, sizeof model);
+
+	if (!StrEqual(myModel, model))
+	{
+		PrintToChatAll("%f", GetEngineTime() - myTime);
+		doIt = false;
+	}
+
+}
 
 public void OnClientPutInServer(int client)
 {
@@ -72,6 +113,7 @@ public void OnClientPutInServer(int client)
 public void OnClientDisconnect(int client)
 {
 	SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
+	SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
 }
 
 public void OnPluginEnd()
@@ -80,9 +122,7 @@ public void OnPluginEnd()
 	{
 		if (!IsClientInGame(client)) continue;
 		SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
-		SetVariantString("");
-		AcceptEntityInput(client, "SetCustomModel");
-		SetEntProp(client, Prop_Send, "m_bUseClassAnimations", 1);
+		SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
 	}
 }
 
