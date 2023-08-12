@@ -15,7 +15,7 @@ public Plugin myinfo =
 	author = "Stinky Lizard",
 	description = "Kill your enemy. Steal their stuff. No class restrictions. Change settings with the sm_freeguns cvars.",
 	version = PLUGIN_VERSION,
-	url = "github.com/stinky-lizard"
+	url = "github.com/stinky-lizard/tf2-freeguns"
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -73,10 +73,12 @@ public void OnPluginStart()
 
 	#if defined __freeguns_model_included
 		modelVar = CreateConVar("sm_freeguns_model", "1", "Enable/disable model switching when changing weapons. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
+		viewmodelVar = CreateConVar("sm_freeguns_viewmodel", "0", "Enable/disable viewmodel switching when changing weapons. Has bugs. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
 		for (int i = 1; i < MaxClients; i++)
 		{
 			if (!IsClientInGame(i)) continue;
 			SDKHook(i, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
+			SDKHook(i, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
 		}
 	#endif
 

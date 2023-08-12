@@ -9,6 +9,7 @@
  */
 
 ConVar modelVar;
+ConVar viewmodelVar;
 
 Action SetPlayerModelFromWeapon(int client, int weapon)
 {
@@ -46,7 +47,6 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 	if (StrEqual(currentModel, worldmodelPath, false)) return Plugin_Continue; //dont need to do anything. already taken up enough processing time
 
 	if (!IsModelPrecached(worldmodelPath)) PrecacheModel(worldmodelPath);
-	if (!IsModelPrecached(viewmodelPath)) PrecacheModel(viewmodelPath);
 
 	SetVariantString(worldmodelPath);
 	AcceptEntityInput(client, "SetCustomModel");
@@ -64,7 +64,7 @@ Action OnClientWeaponSwitch(int client, int weapon)
 
 void OnClientWeaponSwitchPost(int client, int weapon)
 {
-	if (!modelVar.BoolValue) return;
+	if (!viewmodelVar.BoolValue) return;
 
 	int unneeded;
 	TFClassType desiredClass = GetClassOfWeapon(weapon, unneeded);
@@ -72,6 +72,8 @@ void OnClientWeaponSwitchPost(int client, int weapon)
 	char classModelPath[32];
 	char viewmodelPath[64];
 	GetModelOfClass(desiredClass, classModelPath, sizeof classModelPath, viewmodelPath, sizeof viewmodelPath);
+
+	if (!IsModelPrecached(viewmodelPath)) PrecacheModel(viewmodelPath);
 
 	int viewmodel = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
 	// GetEntPropString(viewmodel, Prop_Data, "m_ModelName", str, sizeof str);
@@ -86,6 +88,7 @@ void OnClientWeaponSwitchPost(int client, int weapon)
 public void OnClientPutInServer(int client)
 {
 	SDKHook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
+	SDKHook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
 }
 
 public void OnClientDisconnect(int client)
