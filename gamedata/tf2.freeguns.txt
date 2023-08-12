@@ -36,12 +36,6 @@
 				"linux"		"6"
 				"mac"		"6"
 			}
-			"CBasePlayer::EquipWearable"
-			{
-				"linux" "439"
-				"mac" "439"
-				"windows" "438"
-			}
 		}
 	}
 }
