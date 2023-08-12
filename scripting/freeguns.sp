@@ -275,8 +275,22 @@ MRESReturn GetEntDetour_Post(int iPlayer, DHookReturn hReturn, DHookParam hParam
 
 	TF2_SetPlayerClass(iPlayer, GetSavedClass(iPlayer, "DesiredClass"), _, false);
 
+	#if defined __freeguns_model_included
+		//viewmodel changes back after 1 second, fix that
+		CreateTimer(1.0, PostPickupFixViewmodel, EntIndexToEntRef(iPlayer));
+	#endif
+
 	return MRES_Handled;
 }
+
+#if defined __freeguns_model_included
+	Action PostPickupFixViewmodel(Handle timer, int client)
+	{
+		int weapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+		OnClientWeaponSwitchPost(EntRefToEntIndex(client), weapon);
+		return Plugin_Handled;
+	}
+#endif
 
 int GetEntityFromAddress(Address pEntity)
 {

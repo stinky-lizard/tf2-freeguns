@@ -13,6 +13,7 @@ ConVar modelVar;
 // #define DEBUG3
 
 #define EF_NODRAW 0x020    // don't draw entity
+#define EF_PARENT_ANIMATES 0x200    // don't draw entity
 #if defined DEBUG3
 	Action DeleteWearableTimer(Handle timer, int wearableRef)
 	{
@@ -89,6 +90,11 @@ Action OnClientWeaponSwitch(int client, int weapon)
 	else return Plugin_Continue;
 }
 
+char myModel[PLATFORM_MAX_PATH];
+bool doIt;
+float myTime;
+
+
 void OnClientWeaponSwitchPost(int client, int weapon)
 {
 	if (!modelVar.BoolValue) return;
@@ -108,6 +114,21 @@ void OnClientWeaponSwitchPost(int client, int weapon)
 	int seq = GetEntProp(viewmodel, Prop_Send, "m_nSequence");
 	SetEntityModel(viewmodel, viewmodelPath);
 	SetEntProp(viewmodel, Prop_Send, "m_nSequence", seq);
+}
+
+public void OnGameFrame()
+{
+	if (!doIt || !IsClientInGame(1)) return;
+	int entity = GetEntPropEnt(1, Prop_Send, "m_hViewModel");
+	if (!IsValidEntity(entity)) return;
+	char model[PLATFORM_MAX_PATH];
+	GetEntPropString(entity, Prop_Data, "m_ModelName", model, sizeof model);
+
+	if (!StrEqual(myModel, model))
+	{
+		PrintToChatAll("%f", GetEngineTime() - myTime);
+		doIt = false;
+	}
 
 }
 
@@ -115,14 +136,12 @@ public void OnClientPutInServer(int client)
 {
 	SDKHook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 	SDKHook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
-
 }
 
 public void OnClientDisconnect(int client)
 {
 	SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 	SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
-
 }
 
 public void OnPluginEnd()
