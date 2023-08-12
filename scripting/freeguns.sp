@@ -33,6 +33,7 @@ DynamicDetour hCanPickupDroppedWeaponDetour;
 DynamicDetour hPickupWeaponFromOtherDetour;
 DynamicDetour hGetEntityForLoadoutSlot;
 Handle hSDKCallGetBaseEntity;
+Handle hSDKCallEquipWearable;
 
 KeyValues savedData;
 
@@ -89,6 +90,13 @@ public void OnPluginStart()
 	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CBaseEntity::GetBaseEntity");
 	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
 	hSDKCallGetBaseEntity = EndPrepSDKCall();
+	if (!hSDKCallGetBaseEntity) SetFailState("Failed to setup SDKCall for GetBaseEntity. (Error code 101)");
+
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CBasePlayer::EquipWearable");
+	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
+	hSDKCallEquipWearable = EndPrepSDKCall();
+	if (!hSDKCallEquipWearable) SetFailState("Failed to setup SDKCall for EquipWearable. (Error code 102)");
 
 	//TODO: update function signatures and see if they can be made better
 

@@ -10,7 +10,7 @@
 
 ConVar modelVar;
 
-int viewmodelWearables[MAXPLAYERS];
+int viewmodelWearableRefs[MAXPLAYERS][2];
 
 // #define DEBUG3
 
@@ -85,7 +85,6 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 	// //but we have to do it in the post hook. UpdateHands is called in the WeaponSwitch, and will undo our work.
 	// // SetEntityModel(weapon, str);
 	// // PrintToServer("%s", str);
-	// // SetEntProp(viewmodel, Prop_Send, "m_fEffects", GetEntProp(viewmodel, Prop_Send, "m_fEffects") | EF_NODRAW);
 
 	// //kinda works bot not really
 	// // char weaponmodel[PLATFORM_MAX_PATH];
@@ -104,37 +103,78 @@ Action OnClientWeaponSwitch(int client, int weapon)
 
 void OnClientWeaponSwitchPost(int client, int weapon)
 {
-	if (modelVar.BoolValue)
+	if (!modelVar.BoolValue) return;
+
+	int unneeded;
+	TFClassType desiredClass = GetClassOfWeapon(weapon, unneeded);
+
+	char classModelPath[32];
+	char viewmodelPath[64];
+	GetModelOfClass(desiredClass, classModelPath, sizeof classModelPath, viewmodelPath, sizeof viewmodelPath);
+
+	int viewmodel = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
+	// GetEntPropString(viewmodel, Prop_Data, "m_ModelName", str, sizeof str);
+	// SetEntityModel(weapon, viewmodelPath);
+
+	//change viewmodel anims
+	int seq = GetEntProp(viewmodel, Prop_Send, "m_nSequence");
+	SetEntityModel(viewmodel, viewmodelPath);
+	SetEntProp(viewmodel, Prop_Send, "m_nSequence", seq);
+
+	//hide viewmodel to get rid of flickering
+	SetEntProp(viewmodel, Prop_Send, "m_fEffects", GetEntProp(viewmodel, Prop_Send, "m_fEffects") | EF_NODRAW);
+
+	//re-add viewmodel w/o flickering
+
+	int wearable = viewmodelWearableRefs[client][0];
+	if (!IsValidEntity(EntRefToEntIndex(wearable)) || wearable == 0) //0 = uninitialized
 	{
-		int unneeded;
-		TFClassType desiredClass = GetClassOfWeapon(weapon, unneeded);
-
-		char classModelPath[32];
-		char viewmodelPath[64];
-		GetModelOfClass(desiredClass, classModelPath, sizeof classModelPath, viewmodelPath, sizeof viewmodelPath);
-
-		int viewmodel = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
-		// GetEntPropString(viewmodel, Prop_Data, "m_ModelName", str, sizeof str);
-		// SetEntityModel(weapon, viewmodelPath);
-
-		int seq = GetEntProp(viewmodel, Prop_Send, "m_nSequence");
-		SetEntityModel(viewmodel, viewmodelPath);
-		SetEntProp(viewmodel, Prop_Send, "m_nSequence", seq);
+		wearable = CreateEntityByName("tf_wearable_vm");
+		viewmodelWearableRefs[client][0] = EntIndexToEntRef(wearable);
+		DispatchSpawn(wearable);
 	}
+	SDKCall(hSDKCallEquipWearable, client, wearable);
+	SetEntityModel(wearable, viewmodelPath);
+	SetEntProp(wearable, Prop_Send, "m_bValidatedAttachedEntity", true);
+
+	char weaponModelPath[PLATFORM_MAX_PATH];
+	GetEntPropString(weapon, Prop_Data, "m_ModelName", weaponModelPath, sizeof weaponModelPath);
+	weaponModelPath = "";
+	int weaponWearable = viewmodelWearableRefs[client][1];
+	if (!IsValidEntity(EntRefToEntIndex(weaponWearable)) || weaponWearable == 0)
+	{
+		weaponWearable = CreateEntityByName("tf_wearable_vm");
+		viewmodelWearableRefs[client][1] = EntIndexToEntRef(weaponWearable);
+		DispatchSpawn(weaponWearable);
+	}
+	SDKCall(hSDKCallEquipWearable, client, weaponWearable);
+	SetEntityModel(weaponWearable, weaponModelPath);
+	SetEntProp(weaponWearable, Prop_Send, "m_bValidatedAttachedEntity", true);
+
 }
 
 public void OnClientPutInServer(int client)
 {
 	SDKHook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 	SDKHook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
+
 }
 
 public void OnClientDisconnect(int client)
 {
 	SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 	SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
-	if (viewmodelWearables[client] != 0 && IsValidEntity(viewmodelWearables[client])) RemoveEntity(viewmodelWearables[client]);
-	viewmodelWearables[client] = 0;
+
+	DeleteWearables(client);
+}
+
+void DeleteWearables(int client)
+{
+	if (viewmodelWearableRefs[client][0] != 0 && IsValidEntity(viewmodelWearableRefs[client][0])) RemoveEntity(viewmodelWearableRefs[client][0]);
+	if (viewmodelWearableRefs[client][1] != 0 && IsValidEntity(viewmodelWearableRefs[client][1])) RemoveEntity(viewmodelWearableRefs[client][1]);
+	viewmodelWearableRefs[client][0] = 0;
+	viewmodelWearableRefs[client][1] = 0;
+
 }
 
 public void OnPluginEnd()
@@ -144,8 +184,8 @@ public void OnPluginEnd()
 		if (!IsClientInGame(client)) continue;
 		SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 		SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
-		if (viewmodelWearables[client] != 0 && IsValidEntity(viewmodelWearables[client])) RemoveEntity(viewmodelWearables[client]);
-		viewmodelWearables[client] = 0;
+
+		DeleteWearables(client);
 	}
 }
 
