@@ -66,34 +66,18 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 	int unneeded;
 	TFClassType desiredClass = origClass ?  TF2_GetPlayerClass(client) : GetClassOfWeapon(weapon, unneeded);
 
-
-	char classModelPath[32];
+	char worldmodelPath[32];
 	char viewmodelPath[64];
-	GetModelOfClass(desiredClass, classModelPath, sizeof classModelPath, viewmodelPath, sizeof viewmodelPath);
+	GetModelOfClass(desiredClass, worldmodelPath, sizeof worldmodelPath, viewmodelPath, sizeof viewmodelPath);
 
-	if (StrEqual(currentModel, classModelPath, false)) return Plugin_Continue; //dont need to do anything. already taken up enough processing time
+	if (StrEqual(currentModel, worldmodelPath, false)) return Plugin_Continue; //dont need to do anything. already taken up enough processing time
 
-	if (!IsModelPrecached(classModelPath)) PrecacheModel(classModelPath);
+	if (!IsModelPrecached(worldmodelPath)) PrecacheModel(worldmodelPath);
 	if (!IsModelPrecached(viewmodelPath)) PrecacheModel(viewmodelPath);
 
-	SetVariantString(classModelPath);
+	SetVariantString(worldmodelPath);
 	AcceptEntityInput(client, "SetCustomModel");
 	SetEntProp(client, Prop_Send, "m_bUseClassAnimations", 1);
-
-
-	// int viewmodel = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
-	// char str[128];
-	// GetEntPropString(viewmodel, Prop_Data, "m_ModelName", str, sizeof str);
-
-	// //for some reason, we have to set the WEAPON model to the HANDS model. weird.
-	// //but we have to do it in the post hook. UpdateHands is called in the WeaponSwitch, and will undo our work.
-	// // SetEntityModel(weapon, str);
-	// // PrintToServer("%s", str);
-
-	// //kinda works bot not really
-	// // char weaponmodel[PLATFORM_MAX_PATH];
-	// // GetEntPropString(weapon, Prop_Data, "m_ModelName", weaponmodel, sizeof weaponmodel);
-	// SetEntityModel(viewmodel, viewmodelPath);
 
 	return Plugin_Continue;
 }
