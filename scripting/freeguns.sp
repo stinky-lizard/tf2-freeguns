@@ -60,6 +60,8 @@ public void OnPluginStart()
 	CreateConVar("sm_freeguns_version", PLUGIN_VERSION, "Standard plugin version ConVar. Please don't change me!", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	enabledVar = CreateConVar("sm_freeguns_enabled", "1", "Enable/disable Freeguns. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
 
+	RegConsoleCmd("sm_actionbutton", OnActionButtonCmd, "Print how to find your action button binding.");
+
 	#if defined __freeguns_glow_included
 		glowVar = CreateConVar("sm_freeguns_glow", "1", "Enable/disable custom weapon glow. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
 		glowTimerVar = CreateConVar("sm_freeguns_glow_timer", "0.3", "How often (in seconds) to update weapon glows. Make smaller to make it look nicer, or make larger to help with performance.", FCVAR_REPLICATED|FCVAR_NOTIFY, true, 0.1);
@@ -115,6 +117,14 @@ public void OnPluginStart()
 	if (GetConVarBool(enabledVar)) EnableDetours();
 
 	enabledVar.AddChangeHook(EnabledVarChanged);
+}
+
+Action OnActionButtonCmd(int client, int args)
+{
+	if (GetUserAdmin(client) == INVALID_ADMIN_ID)
+		ReplyToCommand(client, "Run in your console `key_findbinding +use_action_slot_item` to find your Action Button!");
+	else PrintToChatAll("Run in your console `key_findbinding +use_action_slot_item` to find your Action Button!");
+	return Plugin_Handled;
 }
 
 void EnabledVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
