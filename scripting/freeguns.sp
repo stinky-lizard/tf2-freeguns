@@ -6,8 +6,9 @@
 #include <sdkhooks>
 
 #include <tf_econ_data>
+#include <tf2utils>
 
-#define PLUGIN_VERSION "1.2.0"
+#define PLUGIN_VERSION "1.2.1"
 
 public Plugin myinfo =
 {

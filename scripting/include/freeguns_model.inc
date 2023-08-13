@@ -10,6 +10,12 @@
 
 ConVar modelVar;
 
+int clientWearables[MAXPLAYERS][3];
+
+#define EF_NODRAW 0x020
+#define EF_BONEMERGE 0x001
+#define EF_BONEMERGE_FASTCULL 0x080
+
 Action SetPlayerModelFromWeapon(int client, int weapon)
 {
 	if (!IsValidEntity(client) || !IsValidEntity(weapon)) return Plugin_Continue;
@@ -34,6 +40,30 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 	SetVariantString(worldmodelPath);
 	AcceptEntityInput(client, "SetCustomModel");
 	SetEntProp(client, Prop_Send, "m_bUseClassAnimations", 1);
+
+	int wearable = clientWearables[client][0];
+	if (!IsValidEntity(EntRefToEntIndex(wearable)) || wearable == 0) //0 = uninitialized
+	{
+		wearable = CreateEntityByName("tf_wearable");
+		clientWearables[client][0] = EntIndexToEntRef(wearable);
+		SetEntProp(wearable, Prop_Send, "m_fEffects",  EF_BONEMERGE | EF_BONEMERGE_FASTCULL);
+		SetEntProp(wearable, Prop_Send, "m_bValidatedAttachedEntity", 1);
+		SetEntProp(wearable, Prop_Send, "m_iAccountID", GetSteamAccountID(client));
+		SetEntPropEnt(wearable, Prop_Send, "m_hOwnerEntity", client);
+		SetEntProp(wearable, Prop_Send, "m_iTeamNum", GetClientTeam(client));
+		SetEntProp(wearable, Prop_Send, "m_nSkin", GetClientTeam(client));
+		SetEntProp(wearable, Prop_Send, "m_nBody", GetEntProp(client, Prop_Send, "m_nBody"));
+		
+
+		DispatchSpawn(wearable);
+	}
+
+	GetModelOfClass(TF2_GetPlayerClass(client), worldmodelPath, sizeof worldmodelPath, viewmodelPath, sizeof viewmodelPath);
+	SetEntityModel(wearable, worldmodelPath);
+
+	DispatchSpawn(wearable);
+
+	TF2Util_EquipPlayerWearable(client, wearable);
 
 	return Plugin_Continue;
 }
@@ -80,6 +110,7 @@ public void OnClientDisconnect(int client)
 {
 	SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 	SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
+	DeleteWearables(client);
 }
 
 public void OnPluginEnd()
@@ -89,7 +120,18 @@ public void OnPluginEnd()
 		if (!IsClientInGame(client)) continue;
 		SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 		SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
+		DeleteWearables(client);
 	}
+}
+
+void DeleteWearables(int client)
+{
+	if (clientWearables[client][0] != 0 && IsValidEntity(clientWearables[client][0])) RemoveEntity(clientWearables[client][0]);
+	if (clientWearables[client][1] != 0 && IsValidEntity(clientWearables[client][1])) RemoveEntity(clientWearables[client][1]);
+	if (clientWearables[client][2] != 0 && IsValidEntity(clientWearables[client][2])) RemoveEntity(clientWearables[client][2]);
+	clientWearables[client][0] = 0;
+	clientWearables[client][1] = 0;
+	clientWearables[client][2] = 0;
 }
 
 void GetModelOfClass(TFClassType class, char[] worldModel, int worldModelLen, char[] viewModel, int viewModelLen)
