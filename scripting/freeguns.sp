@@ -81,8 +81,11 @@ public void OnPluginStart()
 			if (!IsClientInGame(i)) continue;
 			SDKHook(i, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 			SDKHook(i, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
+			SetWearable(i);
 		}
 	#endif
+
+	HookEvent("post_inventory_application", OnInventoryApplied);
 
 	GameData hGameConf = new GameData("tf2.freeguns");
 
@@ -118,6 +121,27 @@ public void OnPluginStart()
 	if (GetConVarBool(enabledVar)) EnableDetours();
 
 	enabledVar.AddChangeHook(EnabledVarChanged);
+}
+
+
+void OnInventoryApplied(Event event, const char[] name, bool dontBroadcast)
+{
+	int userId = event.GetInt("userid", -1);
+	if (userId == -1) return;
+
+	int client = GetClientOfUserId(userId);
+	if (!IsClientInGame(client) || client == 0) return;
+	CreateTimer(0.5, Timer_PostInventory, client);
+}
+
+Action Timer_PostInventory(Handle timer, int client)
+{
+	#if defined __freeguns_model_included
+	if (modelVar.BoolValue)
+		SetWearable(client);
+	#endif
+
+	return Plugin_Handled;
 }
 
 Action OnActionButtonCmd(int client, int args)
@@ -288,7 +312,7 @@ MRESReturn GetEntDetour_Post(int iPlayer, DHookReturn hReturn, DHookParam hParam
 
 	#if defined __freeguns_model_included
 		//viewmodel changes back after 1 second, fix that
-		CreateTimer(1.0, PostPickupFixViewmodel, EntIndexToEntRef(iPlayer));
+		// CreateTimer(1.0, PostPickupFixViewmodel, EntIndexToEntRef(iPlayer));
 	#endif
 
 	return MRES_Handled;

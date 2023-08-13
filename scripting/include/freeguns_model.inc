@@ -18,11 +18,27 @@ int clientWearables[MAXPLAYERS][3];
 
 Action SetPlayerModelFromWeapon(int client, int weapon)
 {
-	if (!IsValidEntity(client) || !IsValidEntity(weapon)) return Plugin_Continue;
+	if (!IsValidEntity(client)) return Plugin_Continue;
+
+	SetWearable(client);
+
+	if (!IsValidEntity(weapon)) return Plugin_Continue;
 
 	//what class should they look like?
 	TFClassType desiredClass;
 	if (!getDesiredClass(client, weapon, desiredClass)) return Plugin_Continue;
+
+	// //is that their native class?
+	// if (TF2_GetPlayerClass(client) == desiredClass)
+	// {
+	// 	SetEntityRenderMode(clientWearables[client][0], RENDER_NONE);
+	// 	SetEntityRenderMode(client, RENDER_NORMAL);
+	// }
+	// else
+	// {
+	// 	SetEntityRenderMode(clientWearables[client][0], RENDER_NORMAL);
+	// 	SetEntityRenderMode(client, RENDER_NONE);
+	// }
 
 	//what is the model of that class?
 	char worldmodelPath[PLATFORM_MAX_PATH];
@@ -30,9 +46,9 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 	GetModelOfClass(desiredClass, worldmodelPath, sizeof worldmodelPath, viewmodelPath, sizeof viewmodelPath);
 
 	//are they already this model?
-	char currentModel[PLATFORM_MAX_PATH];
-	GetClientModel(client, currentModel, sizeof currentModel);
-	if (StrEqual(currentModel, worldmodelPath, false)) return Plugin_Continue; //dont need to do anything. already taken up enough processing time
+	// char currentModel[PLATFORM_MAX_PATH];
+	// GetClientModel(client, currentModel, sizeof currentModel);
+	// if (StrEqual(currentModel, worldmodelPath, false)) return Plugin_Continue; //dont need to do anything. already taken up enough processing time
 
 	//actually set model
 	if (!IsModelPrecached(worldmodelPath)) PrecacheModel(worldmodelPath);
@@ -40,6 +56,13 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 	SetVariantString(worldmodelPath);
 	AcceptEntityInput(client, "SetCustomModel");
 	SetEntProp(client, Prop_Send, "m_bUseClassAnimations", 1);
+
+
+	return Plugin_Continue;
+}
+
+void SetWearable(int client)
+{
 
 	int wearable = clientWearables[client][0];
 	if (!IsValidEntity(EntRefToEntIndex(wearable)) || wearable == 0) //0 = uninitialized
@@ -52,20 +75,24 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 		SetEntPropEnt(wearable, Prop_Send, "m_hOwnerEntity", client);
 		SetEntProp(wearable, Prop_Send, "m_iTeamNum", GetClientTeam(client));
 		SetEntProp(wearable, Prop_Send, "m_nSkin", GetClientTeam(client));
-		SetEntProp(wearable, Prop_Send, "m_nBody", GetEntProp(client, Prop_Send, "m_nBody"));
-		
+		// SetEntProp(wearable, Prop_Send, "m_nBody", GetEntProp(client, Prop_Send, "m_nBody"));
 
 		DispatchSpawn(wearable);
 	}
 
-	GetModelOfClass(TF2_GetPlayerClass(client), worldmodelPath, sizeof worldmodelPath, viewmodelPath, sizeof viewmodelPath);
-	SetEntityModel(wearable, worldmodelPath);
-
-	DispatchSpawn(wearable);
+	char realClassModel[PLATFORM_MAX_PATH];
+	char realClassViewmodel[PLATFORM_MAX_PATH];
+	GetModelOfClass(TF2_GetPlayerClass(client), realClassModel, sizeof realClassModel, realClassViewmodel, sizeof realClassViewmodel);
+	//todo: check model already set
+	// PrintToChatAll("model: %s", realClassModel);
+	SetEntityModel(wearable, realClassModel);
 
 	TF2Util_EquipPlayerWearable(client, wearable);
 
-	return Plugin_Continue;
+	SetEntityRenderMode(client, RENDER_NONE);
+	// SetEntityRenderMode(client, RENDER_NORMAL);
+	// SetEntityRenderMode(wearable, RENDER_NONE);
+
 }
 
 Action OnClientWeaponSwitch(int client, int weapon)
@@ -126,11 +153,12 @@ public void OnPluginEnd()
 
 void DeleteWearables(int client)
 {
+	SetEntityRenderMode(client, RENDER_NORMAL);
 	if (clientWearables[client][0] != 0 && IsValidEntity(clientWearables[client][0])) RemoveEntity(clientWearables[client][0]);
-	if (clientWearables[client][1] != 0 && IsValidEntity(clientWearables[client][1])) RemoveEntity(clientWearables[client][1]);
-	if (clientWearables[client][2] != 0 && IsValidEntity(clientWearables[client][2])) RemoveEntity(clientWearables[client][2]);
 	clientWearables[client][0] = 0;
+	if (clientWearables[client][1] != 0 && IsValidEntity(clientWearables[client][1])) RemoveEntity(clientWearables[client][1]);
 	clientWearables[client][1] = 0;
+	if (clientWearables[client][2] != 0 && IsValidEntity(clientWearables[client][2])) RemoveEntity(clientWearables[client][2]);
 	clientWearables[client][2] = 0;
 }
 
@@ -197,7 +225,8 @@ bool getDesiredClass(int client, int weapon, TFClassType& out_desiredClass)
 	ReplaceString(classnameString, sizeof classnameString, "models/player/", "", false);
 	ReplaceString(classnameString, sizeof classnameString, ".mdl", "", false);
 
-	TFClassType currentClassLook = TF2_GetClass(classnameString);
+	// TFClassType currentClassLook = TF2_GetClass(classnameString);
+	TFClassType currentClassLook = TF2_GetPlayerClass(client);
 
 	bool origClass = false;
 	if (TF2Econ_GetItemLoadoutSlot(GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex"), currentClassLook) != -1)
@@ -208,7 +237,7 @@ bool getDesiredClass(int client, int weapon, TFClassType& out_desiredClass)
 			//if the weapon also works with the player's real class, then switch back to that for this
 			origClass = true;
 		}
-		else return false;
+		// else return false;
 	}
 
 	int unneeded;
