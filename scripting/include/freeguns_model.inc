@@ -9,9 +9,6 @@
  */
 
 ConVar modelVar;
-ConVar viewmodelVar;
-
-int viewmodelWearableRefs[MAXPLAYERS][2];
 
 Action SetPlayerModelFromWeapon(int client, int weapon)
 {
@@ -57,6 +54,7 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 	return Plugin_Continue;
 }
 
+
 Action OnClientWeaponSwitch(int client, int weapon)
 {
 	if (modelVar.BoolValue)
@@ -66,14 +64,35 @@ Action OnClientWeaponSwitch(int client, int weapon)
 
 void OnClientWeaponSwitchPost(int client, int weapon)
 {
-	if (!viewmodelVar.BoolValue) return;
+	if (!modelVar.BoolValue) return;
+
+	char currentModel[32];
+	GetClientModel(client, currentModel, sizeof currentModel);
+
+	char classnameString[32];
+	strcopy(classnameString, sizeof classnameString, currentModel);
+	ReplaceString(classnameString, sizeof classnameString, "models/player/", "", false);
+	ReplaceString(classnameString, sizeof classnameString, ".mdl", "", false);
+
+	TFClassType currentClassLook = TF2_GetClass(classnameString);
+	bool origClass = false;
+	if (TF2Econ_GetItemLoadoutSlot(GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex"), currentClassLook) != -1)
+	{
+		//this weapon works with what they look like! dont need to do anything
+		if (TF2Econ_GetItemLoadoutSlot(GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex"), TF2_GetPlayerClass(client)) != -1)
+		{
+			//if the weapon also works with the player's native class, then switch back to that for this
+			origClass = true;
+		}
+		else return;
+	}
 
 	int unneeded;
-	TFClassType desiredClass = GetClassOfWeapon(weapon, unneeded);
+	TFClassType desiredClass = origClass ?  TF2_GetPlayerClass(client) : GetClassOfWeapon(weapon, unneeded);
 
-	char classModelPath[PLATFORM_MAX_PATH];
+	char worldmodelPath[PLATFORM_MAX_PATH];
 	char viewmodelPath[PLATFORM_MAX_PATH];
-	GetModelOfClass(desiredClass, classModelPath, sizeof classModelPath, viewmodelPath, sizeof viewmodelPath);
+	GetModelOfClass(desiredClass, worldmodelPath, sizeof worldmodelPath, viewmodelPath, sizeof viewmodelPath);
 
 	if (!IsModelPrecached(viewmodelPath)) PrecacheModel(viewmodelPath);
 
@@ -82,71 +101,6 @@ void OnClientWeaponSwitchPost(int client, int weapon)
 	//Thanks to Zabaniya001 at https://github.com/Zabaniya001/TF2-ProperClassWeaponAnimations
 	SetEntProp(weapon, Prop_Send, "m_nCustomViewmodelModelIndex", GetEntProp(weapon, Prop_Send, "m_nModelIndex"));
 	SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", GetEntProp(weapon, Prop_Send, "m_nModelIndex"));
-
-	return;
-
-	int viewmodel = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
-	// GetEntPropString(viewmodel, Prop_Data, "m_ModelName", str, sizeof str);
-	// SetEntityModel(weapon, viewmodelPath);
-
-	//change viewmodel anims
-	//todo: needed?
-	// int seq = GetEntProp(viewmodel, Prop_Send, "m_nSequence");
-	// SetEntityModel(viewmodel, viewmodelPath);
-	// SetEntProp(viewmodel, Prop_Send, "m_nSequence", seq);
-
-
-	//hide viewmodel to get rid of flickering
-	#define EF_NODRAW 0x020
-	SetEntProp(viewmodel, Prop_Send, "m_fEffects", GetEntProp(viewmodel, Prop_Send, "m_fEffects") | EF_NODRAW);
-
-	//re-add viewmodel w/o flickering
-	//arms wearable
-	int wearable = viewmodelWearableRefs[client][0];
-	if (!IsValidEntity(EntRefToEntIndex(wearable)) || wearable == 0) //0 = uninitialized
-	{
-		wearable = CreateEntityByName("tf_wearable_vm");
-		viewmodelWearableRefs[client][0] = EntIndexToEntRef(wearable);
-
-		#define EF_BONEMERGE 0x001
-		#define EF_BONEMERGE_FASTCULL 0x080
-		SetEntProp(wearable, Prop_Send, "m_fEffects",  EF_BONEMERGE | EF_BONEMERGE_FASTCULL);
-		SetEntProp(wearable, Prop_Send, "m_bValidatedAttachedEntity", 1);
-		SetEntProp(wearable, Prop_Send, "m_iAccountID", GetSteamAccountID(client));
-		SetEntPropEnt(wearable, Prop_Send, "m_hOwnerEntity", client);
-
-		DispatchSpawn(wearable);
-	}
-
-	SetEntProp(wearable, Prop_Send, "m_iTeamNum", GetClientTeam(client));
-	SetEntProp(wearable, Prop_Send, "m_nSkin", GetClientTeam(client));
-
-	SetEntityModel(wearable, viewmodelPath);
-
-	//todo: needed?
-	SetVariantString("!activator");
-	ActivateEntity(wearable);
-
-	SetEntPropEnt(wearable, Prop_Send, "m_hWeaponAssociatedWith", weapon);
-
-	TF2Util_EquipPlayerWearable(client, wearable);
-
-	//weapon wearable
-	char weaponModelPath[PLATFORM_MAX_PATH];
-	GetEntPropString(weapon, Prop_Data, "m_ModelName", weaponModelPath, sizeof weaponModelPath);
-	int weaponWearable = viewmodelWearableRefs[client][1];
-	if (!IsValidEntity(EntRefToEntIndex(weaponWearable)) || weaponWearable == 0)
-	{
-		weaponWearable = CreateEntityByName("tf_wearable_vm");
-		viewmodelWearableRefs[client][1] = EntIndexToEntRef(weaponWearable);
-		DispatchSpawn(weaponWearable);
-	}
-
-	SetEntityModel(weaponWearable, weaponModelPath);
-
-	SetEntPropEnt(weaponWearable, Prop_Send, "m_hWeaponAssociatedWith", weapon);
-
-	TF2Util_EquipPlayerWearable(client, weaponWearable);
 }
 
 public void OnClientPutInServer(int client)
@@ -159,8 +113,6 @@ public void OnClientDisconnect(int client)
 {
 	SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 	SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
-
-	DeleteWearables(client);
 }
 
 public void OnPluginEnd()
@@ -170,16 +122,7 @@ public void OnPluginEnd()
 		if (!IsClientInGame(client)) continue;
 		SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 		SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
-		DeleteWearables(client);
 	}
-}
-
-void DeleteWearables(int client)
-{
-	if (viewmodelWearableRefs[client][0] != 0 && IsValidEntity(viewmodelWearableRefs[client][0])) RemoveEntity(viewmodelWearableRefs[client][0]);
-	if (viewmodelWearableRefs[client][1] != 0 && IsValidEntity(viewmodelWearableRefs[client][1])) RemoveEntity(viewmodelWearableRefs[client][1]);
-	viewmodelWearableRefs[client][0] = 0;
-	viewmodelWearableRefs[client][1] = 0;
 }
 
 void GetModelOfClass(TFClassType class, char[] worldModel, int worldModelLen, char[] viewModel, int viewModelLen)
