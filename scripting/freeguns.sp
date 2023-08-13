@@ -3,11 +3,12 @@
 #include <sdktools>
 #include <dhooks>
 #include <tf2_stocks>
-#include <tf_econ_data>
 #include <sdkhooks>
 
+#include <tf_econ_data>
+#include <tf2utils>
 
-#define PLUGIN_VERSION "1.2.0"
+#define PLUGIN_VERSION "1.2.0-beta"
 
 public Plugin myinfo =
 {
@@ -73,7 +74,7 @@ public void OnPluginStart()
 
 	#if defined __freeguns_model_included
 		modelVar = CreateConVar("sm_freeguns_model", "1", "Enable/disable model switching when changing weapons. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
-		viewmodelVar = CreateConVar("sm_freeguns_viewmodel", "0", "Enable/disable viewmodel switching when changing weapons. Has bugs. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
+		viewmodelVar = CreateConVar("sm_freeguns_viewmodel", "1", "Enable/disable viewmodel switching when changing weapons. Has bugs. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
 		for (int i = 1; i < MaxClients; i++)
 		{
 			if (!IsClientInGame(i)) continue;
