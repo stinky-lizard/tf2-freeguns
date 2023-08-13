@@ -14,37 +14,21 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 {
 	if (!IsValidEntity(client) || !IsValidEntity(weapon)) return Plugin_Continue;
 
-	char currentModel[32];
-	GetClientModel(client, currentModel, sizeof currentModel);
+	//what class should they look like?
+	TFClassType desiredClass;
+	if (!getDesiredClass(client, weapon, desiredClass)) return Plugin_Continue;
 
-	char classnameString[32];
-	strcopy(classnameString, sizeof classnameString, currentModel);
-	ReplaceString(classnameString, sizeof classnameString, "models/player/", "", false);
-	ReplaceString(classnameString, sizeof classnameString, ".mdl", "", false);
-
-	TFClassType currentClassLook = TF2_GetClass(classnameString);
-
-	bool origClass = false;
-	if (TF2Econ_GetItemLoadoutSlot(GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex"), currentClassLook) != -1)
-	{
-		//this weapon works with what they look like! dont need to do anything
-		if (TF2Econ_GetItemLoadoutSlot(GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex"), TF2_GetPlayerClass(client)) != -1)
-		{
-			//if the weapon also works with the player's native class, then switch back to that for this
-			origClass = true;
-		}
-		else return Plugin_Continue;
-	}
-
-	int unneeded;
-	TFClassType desiredClass = origClass ?  TF2_GetPlayerClass(client) : GetClassOfWeapon(weapon, unneeded);
-
-	char worldmodelPath[32];
-	char viewmodelPath[64];
+	//what is the model of that class?
+	char worldmodelPath[PLATFORM_MAX_PATH];
+	char viewmodelPath[PLATFORM_MAX_PATH];
 	GetModelOfClass(desiredClass, worldmodelPath, sizeof worldmodelPath, viewmodelPath, sizeof viewmodelPath);
 
+	//are they already this model?
+	char currentModel[PLATFORM_MAX_PATH];
+	GetClientModel(client, currentModel, sizeof currentModel);
 	if (StrEqual(currentModel, worldmodelPath, false)) return Plugin_Continue; //dont need to do anything. already taken up enough processing time
 
+	//actually set model
 	if (!IsModelPrecached(worldmodelPath)) PrecacheModel(worldmodelPath);
 
 	SetVariantString(worldmodelPath);
@@ -53,7 +37,6 @@ Action SetPlayerModelFromWeapon(int client, int weapon)
 
 	return Plugin_Continue;
 }
-
 
 Action OnClientWeaponSwitch(int client, int weapon)
 {
@@ -66,34 +49,18 @@ void OnClientWeaponSwitchPost(int client, int weapon)
 {
 	if (!modelVar.BoolValue) return;
 
-	char currentModel[32];
-	GetClientModel(client, currentModel, sizeof currentModel);
+	//what class should they look like?
+	TFClassType desiredClass;
+	if (!getDesiredClass(client, weapon, desiredClass)) return;
 
-	char classnameString[32];
-	strcopy(classnameString, sizeof classnameString, currentModel);
-	ReplaceString(classnameString, sizeof classnameString, "models/player/", "", false);
-	ReplaceString(classnameString, sizeof classnameString, ".mdl", "", false);
-
-	TFClassType currentClassLook = TF2_GetClass(classnameString);
-	bool origClass = false;
-	if (TF2Econ_GetItemLoadoutSlot(GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex"), currentClassLook) != -1)
-	{
-		//this weapon works with what they look like! dont need to do anything
-		if (TF2Econ_GetItemLoadoutSlot(GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex"), TF2_GetPlayerClass(client)) != -1)
-		{
-			//if the weapon also works with the player's native class, then switch back to that for this
-			origClass = true;
-		}
-		else return;
-	}
-
-	int unneeded;
-	TFClassType desiredClass = origClass ?  TF2_GetPlayerClass(client) : GetClassOfWeapon(weapon, unneeded);
-
+	//what is the model of that class?
 	char worldmodelPath[PLATFORM_MAX_PATH];
 	char viewmodelPath[PLATFORM_MAX_PATH];
 	GetModelOfClass(desiredClass, worldmodelPath, sizeof worldmodelPath, viewmodelPath, sizeof viewmodelPath);
 
+	//skipping checking if they're already this model b/c i'm not sure what ent is what model holy shit its weird
+
+	//actually set model
 	if (!IsModelPrecached(viewmodelPath)) PrecacheModel(viewmodelPath);
 
 	SetEntityModel(weapon, viewmodelPath);
@@ -176,4 +143,34 @@ void GetModelOfClass(TFClassType class, char[] worldModel, int worldModelLen, ch
 			strcopy(viewModel, viewModelLen, "models/weapons/c_models/c_spy_arms.mdl");
 		}
 	}
+}
+
+bool getDesiredClass(int client, int weapon, TFClassType& out_desiredClass)
+{
+	char currentModel[PLATFORM_MAX_PATH];
+	GetClientModel(client, currentModel, sizeof currentModel);
+
+	char classnameString[32];
+	strcopy(classnameString, sizeof classnameString, currentModel);
+	ReplaceString(classnameString, sizeof classnameString, "models/player/", "", false);
+	ReplaceString(classnameString, sizeof classnameString, ".mdl", "", false);
+
+	TFClassType currentClassLook = TF2_GetClass(classnameString);
+
+	bool origClass = false;
+	if (TF2Econ_GetItemLoadoutSlot(GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex"), currentClassLook) != -1)
+	{
+		//this weapon works with what they look like! dont need to do anything
+		if (TF2Econ_GetItemLoadoutSlot(GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex"), TF2_GetPlayerClass(client)) != -1)
+		{
+			//if the weapon also works with the player's real class, then switch back to that for this
+			origClass = true;
+		}
+		else return false;
+	}
+
+	int unneeded;
+	out_desiredClass = origClass ?  TF2_GetPlayerClass(client) : GetClassOfWeapon(weapon, unneeded);
+
+	return true;
 }
