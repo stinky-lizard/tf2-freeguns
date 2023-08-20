@@ -3,12 +3,12 @@
 #include <sdktools>
 #include <dhooks>
 #include <tf2_stocks>
+
 #include <sdkhooks>
 
 #include <tf_econ_data>
-#include <tf2utils>
 
-#define PLUGIN_VERSION "1.2.1"
+#define PLUGIN_VERSION "1.2.3-beta"
 
 public Plugin myinfo =
 {
@@ -41,7 +41,7 @@ ConVar enabledVar;
 
 #include <freeguns_glow>
 #include <freeguns_hud>
-#include <freeguns_model>
+// #include <freeguns_model>
 // #define DEBUG
 
 public void OnEntityCreated(int entity, const char[] classname)
@@ -224,7 +224,6 @@ MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hPar
 	int iWeaponEnt = GetEntityFromAddress(weaponMemAddress);
 	SaveClasses(iPlayer, iWeaponEnt);
 
-
 	#if defined DEBUG
 		PrintToServer("CanPickPre: Switch to desired class (%i)", GetSavedClass(iPlayer, "DesiredClass"));
 	#endif
@@ -275,6 +274,14 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 
 	TF2_SetPlayerClass(iPlayer, GetSavedClass(iPlayer, "CurrentClass"), _, false);
 
+	//for sigsegv
+	Address weaponMemAddress = hParams.GetAddress(1);
+	int iWeaponEnt = GetEntityFromAddress(weaponMemAddress);
+	DataPack data = new DataPack();
+	data.WriteCell(iPlayer);
+	data.WriteCell(iWeaponEnt);
+	RequestFrame(OnNextFramePickup, data);
+
 	//we're done! delete the user's key
 	char userIdStr[32];
 	IntToString(GetClientUserId(iPlayer), userIdStr, sizeof userIdStr);
@@ -283,6 +290,20 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 	savedData.Rewind();
 
 	return MRES_Handled;
+}
+
+void OnNextFramePickup(DataPack data)
+{
+	data.Reset();
+	int iPlayer = data.ReadCell();
+	int iWeaponEnt = data.ReadCell();
+
+	iWeaponEnt = CreateEntityByName("tf_weapon_scattergun");
+	DispatchSpawn(iWeaponEnt);
+
+	EquipPlayerWeapon(iPlayer, iWeaponEnt);
+
+	delete data;
 }
 
 MRESReturn GetEntDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams)

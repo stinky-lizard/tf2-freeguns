@@ -44,6 +44,7 @@ void DroppedWeaponNextFrame(int entityref)
 	int accountid = GetEntProp(entityref, Prop_Send, "m_iAccountID");
 	for (int client = 1; client < MaxClients; client++)
 	{
+		if (!IsClientConnected(client)) continue;
 		if (GetSteamAccountID(client) == accountid)
 		{
 			GetClientName(client, clientname, sizeof clientname);
@@ -115,7 +116,7 @@ Action OnHudTransmit(int worldtext, int client)
 
 
 void MoveWorldtextAboveParent(int worldtext, int weapon)
-{	
+{
 	static float lastTimeMoved;
 	if (GetGameTime() > lastTimeMoved + 0.2)
 	{

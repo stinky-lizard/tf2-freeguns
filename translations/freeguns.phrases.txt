@@ -104,4 +104,40 @@
 	{
 		"en"	"Medigun"
 	}
+	"TF_WEAPON_PDA_ENGINEER_BUILD"
+	{
+		"en"	"PDA"
+	}
+	"TF_WEAPON_PDA_ENGINEER_DESTROY"
+	{
+		"en"	"Destruction PDA"
+	}
+	"TF_WEAPON_PDA_SPY"
+	{
+		"en"	"Disguise Tool"
+	}
+	"TF_WEAPON_BUILDER"
+	{
+		"en"	"Build Tool"
+	}
+	"TF_WEAPON_INVIS"
+	{
+		"en"	"Invis Watch"
+	}
+	"TF_WEAPON_BUILDER_SPY"
+	{
+		"en"	"Sapper"
+	}
+	"TF_WEAPON_SPELLBOOK"
+	{
+		"en"	"Spellbook"
+	}
+	"TF_WEAPON_GRAPPLINGHOOK"
+	{
+		"en"	"Grappling Hook"
+	}
+	"TF_WEAPON_PASSTIME_GUN"
+	{
+		"en"	"Passtime Gun"
+	}
 }
