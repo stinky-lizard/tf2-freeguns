@@ -8,7 +8,7 @@
 
 #include <tf_econ_data>
 
-#define PLUGIN_VERSION "1.2.3-beta"
+#define PLUGIN_VERSION "1.2.4-beta"
 
 public Plugin myinfo =
 {
@@ -43,7 +43,7 @@ ConVar enabledVar;
 #include <freeguns_glow>
 #include <freeguns_hud>
 // #include <freeguns_model>
-#define DEBUG
+// #define DEBUG
 
 public void OnEntityCreated(int entity, const char[] classname)
 {
@@ -282,11 +282,11 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 
 	//for sigsegv
 	Address weaponMemAddress = hParams.GetAddress(1);
-	int iWeaponEnt = GetEntityFromAddress(weaponMemAddress);
+	int iDroppedWeaponEnt = GetEntityFromAddress(weaponMemAddress);
 
 	int iEquippedWeaponEnt, equippedWeaponSlot;
 
-	GetClassOfWeapon(iWeaponEnt, equippedWeaponSlot, TF2_GetPlayerClass(iPlayer));
+	GetClassOfWeapon(iDroppedWeaponEnt, equippedWeaponSlot, TF2_GetPlayerClass(iPlayer));
 
 	iEquippedWeaponEnt = GetPlayerWeaponSlot(iPlayer, equippedWeaponSlot);
 
@@ -294,11 +294,11 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 		PrintToServer("Weapon is in slot %i!", equippedWeaponSlot);
 		char classname[64];
 		GetEntityClassname(iEquippedWeaponEnt, classname, sizeof classname);
-		PrintToServer("Equipping %i : %s!", iEquippedWeaponEnt, classname);
+		PrintToServer("Re-equipping %i : %s!", iEquippedWeaponEnt, classname);
 	#endif
 
+	//can't just equip iWeaponEnt bc that's the tf_dropped_weapon
 	EquipPlayerWeapon(iPlayer, iEquippedWeaponEnt);
-
 
 	//we're done! delete the user's key
 	char userIdStr[32];
@@ -382,18 +382,22 @@ void SaveClasses(int client, int weapon)
 	//have to translate the relevant LOADOUT slot to the relevant WEAPON slot. They are not defined the same way, and some values match differently.
 	//Since we're only dealing with weapons you can pick up, we only really need to deal with the three main weapon slots.
 
-	//While this might be optimizable, since it seems like the loadout slots and the weapon slots are the same for the three main ones,
-	//I'm not sure about that. This is safer.
-	char weaponSlotName[64];
-	TF2Econ_TranslateLoadoutSlotIndexToName(loadoutSlotUsedByPickup, weaponSlotName, sizeof weaponSlotName);
-	if (StrEqual(weaponSlotName, "primary")) weaponSlotUsedByPickup = TFWeaponSlot_Primary;
-	if (StrEqual(weaponSlotName, "secondary")) weaponSlotUsedByPickup = TFWeaponSlot_Secondary;
-	if (StrEqual(weaponSlotName, "melee")) weaponSlotUsedByPickup = TFWeaponSlot_Melee;
+	// //While this might be optimizable, since it seems like the loadout slots and the weapon slots are the same for the three main ones,
+	// //I'm not sure about that. This is safer.
+	// char weaponSlotName[64];
+	// TF2Econ_TranslateLoadoutSlotIndexToName(loadoutSlotUsedByPickup, weaponSlotName, sizeof weaponSlotName);
+	// if (StrEqual(weaponSlotName, "primary")) weaponSlotUsedByPickup = TFWeaponSlot_Primary;
+	// if (StrEqual(weaponSlotName, "secondary")) weaponSlotUsedByPickup = TFWeaponSlot_Secondary;
+	// if (StrEqual(weaponSlotName, "melee")) weaponSlotUsedByPickup = TFWeaponSlot_Melee;
+
+	//For the three main ones, loadout slot is the same as weapon slot.
+	//I'm confident that won't change, it's too ingrained in the game.
+	weaponSlotUsedByPickup = loadoutSlotUsedByPickup;
 
 	#if defined DEBUG
 		PrintToServer("LoadoutSlot: %i", loadoutSlotUsedByPickup);
 		PrintToServer("WeaponSlot: %i", weaponSlotUsedByPickup);
-		PrintToServer("WeaponSlotName: %s", weaponSlotName);
+		// PrintToServer("WeaponSlotName: %s", weaponSlotName);
 	#endif
 
 	int weaponToDrop = GetPlayerWeaponSlot(client, weaponSlotUsedByPickup);
