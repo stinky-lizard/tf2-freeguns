@@ -288,11 +288,11 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 		PrintToServer("Weapon is in slot %i!", equippedWeaponSlot);
 		char classname[64];
 		GetEntityClassname(iEquippedWeaponEnt, classname, sizeof classname);
-		PrintToServer("Re-equipping %i : %s!", iEquippedWeaponEnt, classname);
+		if (hReturn.Value) PrintToServer("Re-equipping %i : %s!", iEquippedWeaponEnt, classname);
 	#endif
 
 	//can't just equip iWeaponEnt bc that's the tf_dropped_weapon
-	EquipPlayerWeapon(iPlayer, iEquippedWeaponEnt);
+	if (hReturn.Value) EquipPlayerWeapon(iPlayer, iEquippedWeaponEnt);
 
 	//we're done! delete the user's key
 	char userIdStr[32];
@@ -311,6 +311,15 @@ MRESReturn GetEntDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams
 	#endif
 
 	TF2_SetPlayerClass(iPlayer, GetSavedClass(iPlayer, "CurrentWeaponClass"), _, false);
+
+	//ough fuck you rafradek
+	if (hParams.Get(1) > -1 && hParams.Get(1) < 3)
+	{
+		//we dont need the fucking wearables!
+		hReturn.Value = GetPlayerWeaponSlot(iPlayer, hParams.Get(1));
+		return MRES_Override;
+	}
+
 	return MRES_Handled;
 }
 MRESReturn GetEntDetour_Post(int iPlayer, DHookReturn hReturn, DHookParam hParams)
@@ -320,9 +329,25 @@ MRESReturn GetEntDetour_Post(int iPlayer, DHookReturn hReturn, DHookParam hParam
 		{
 			char clsname[65];
 			GetEntityClassname(hReturn.Value, clsname, sizeof clsname);
-			PrintToServer("Found item for needed slot (%s)!", clsname);
+			PrintToServer("Found item for needed slot %i : %s!", hParams.Get(1), clsname);
+			//for rafradek/sigsegv-mvm
+			if (StrEqual("tf_wearable_vm", clsname))
+			{
+				char model[PLATFORM_MAX_PATH];
+				GetEntPropString(hReturn.Value, Prop_Data, "m_ModelName", model, sizeof model);
+				PrintToServer("VM Wearable Model: %s", model);
+				for (int i = 0; i < 32; i++)
+				{
+					int ent;
+					ent = GetPlayerWeaponSlot(iPlayer, i);
+					if (ent == -1) continue;
+					GetEntityClassname(ent, clsname, sizeof clsname);
+					PrintToServer("Item in slot %i : %s", i , clsname);
+
+				}
+			}
 		}
-		else PrintToServer("Found nothing for needed slot...");
+		else PrintToServer("Found nothing for needed slot %i...", hParams.Get(1));
 
 		PrintToServer("GetEntPost: Switch back to desired class (%i)", GetSavedClass(iPlayer, "DesiredClass"));
 	#endif
