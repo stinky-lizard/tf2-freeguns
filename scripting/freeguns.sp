@@ -66,7 +66,8 @@ public void OnPluginStart()
 
 	#if defined __freeguns_glow_included
 		glowVar = CreateConVar("sm_freeguns_glow", "1", "Enable/disable custom weapon glow. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
-		glowTimerVar = CreateConVar("sm_freeguns_glow_timer", "0.3", "How often (in seconds) to update weapon glows. Make smaller to make it look nicer, or make larger to help with performance.", FCVAR_REPLICATED|FCVAR_NOTIFY, true, 0.1);
+		glowTimerVar = CreateConVar("sm_freeguns_glow_timer", "0.3", "How often (in seconds) to update weapon glows. Make smaller to make it look nicer, or make larger to help with performance.", FCVAR_REPLICATED, true, 0.1);
+		glowRadVar = CreateConVar("sm_freeguns_glow_radius", "500", "How far (in units) dropped weapons should glow for players. Increase this to convey more info to the player, or reduce to potentially reduce visual noise/clutter.", FCVAR_REPLICATED);
 		allGlowEntities = new ArrayList(sizeof GlowEntity);
 	#endif
 
@@ -127,6 +128,16 @@ public void OnPluginStart()
 	if (GetConVarBool(enabledVar)) EnableDetours();
 
 	enabledVar.AddChangeHook(EnabledVarChanged);
+}
+
+public void OnClientDisconnect(int client)
+{
+	#if defined __freeguns_model_included
+		ModelOnClientDisconnect(client);
+	#endif
+	#if defined __freeguns_glow_included
+		GlowOnClientDisconnect(client);
+	#endif
 }
 
 

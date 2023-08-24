@@ -133,7 +133,7 @@ public void OnClientPutInServer(int client)
 	SDKHook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
 }
 
-public void OnClientDisconnect(int client)
+void ModelOnClientDisconnect(int client)
 {
 	SDKUnhook(client, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
 	SDKUnhook(client, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);

@@ -13,7 +13,7 @@
 	//if hud included is already defined, then these are already declared/defined there
 	//usually glow would be included first, but if it's included second then hud would have already done this
 
-ConVar glowVar, glowTimerVar;
+ConVar glowVar, glowTimerVar, glowRadVar;
 //I wished there's a more elegant solution than this, but it seems that's all for naught :(
 ArrayList allGlowEntities;
 
@@ -97,11 +97,24 @@ Action CalculateLineOfSight(Handle timer, int glowEntRef)
 	{
 		if (!IsClientInGame(client) || IsFakeClient(client))
 			continue;
-		//Do they have LOS?
+
 		GetClientEyePosition(client, eyepos);
-
 		GetEntPropVector(glowEnt.parentRef, Prop_Send, "m_vecOrigin", glowpos);
+		
+		//Are they close enough?
+		//Don't show it if they're too far. If they are, it'll just be too much visual noise
 
+		//Question: Search in a box or search in a sphere?
+		//A box is faster, and is probably good enough
+		if (FloatAbs(eyepos[0] - glowpos[0]) > glowRadVar.FloatValue || FloatAbs(eyepos[1] - glowpos[1]) > glowRadVar.FloatValue)
+		{
+			//they're too far; they shouldn't see it
+			RemoveClientFromSightArray(client, glowEnt);
+			allGlowEntities.SetArray(glowEntArrIndex, glowEnt);
+			return Plugin_Continue;
+		}
+
+		//Do they have LOS?
 		Handle hTrace = TR_TraceRayFilterEx(eyepos, glowpos, MASK_SOLID, RayType_EndPoint, ClientViewsFilter);
 
 		int entindex = TR_GetEntityIndex(hTrace);
@@ -117,13 +130,7 @@ Action CalculateLineOfSight(Handle timer, int glowEntRef)
 		else
 		{
 			//if this hit, they don't have sight
-			int index = FindClientInSightArray(glowEnt, client);
-			if (index != -1)
-			{
-
-				glowEnt.playersWithSight[index] = 0;
-
-			}
+			RemoveClientFromSightArray(client, glowEnt);
 		}
 
 		delete hTrace;
@@ -135,6 +142,17 @@ Action CalculateLineOfSight(Handle timer, int glowEntRef)
 	return Plugin_Continue;
 }
 
+void RemoveClientFromSightArray(int client, GlowEntity glowEnt, bool force = false)
+{	
+	if (force)
+	{
+		glowEnt.playersWithSight[client] = 0;
+		return;
+	}
+	else if (IsClientInSightArray(glowEnt, client))
+		glowEnt.playersWithSight[client] = 0;
+}
+
 void RayHitWeapon(int client, GlowEntity glowEnt)
 {
 	//the ray hit the weapon first, not the world, so they have LOS
@@ -142,17 +160,9 @@ void RayHitWeapon(int client, GlowEntity glowEnt)
 
 	//sanity check
 	if (userid == 0) { LogError("Bad news: UserID of client %i is 0!", client); return; }
-	if (FindClientInSightArray(glowEnt, client) == -1)
+	if (!IsClientInSightArray(glowEnt, client))
 	{
-
-		for (int i = 0; i < sizeof glowEnt.playersWithSight; i++)
-		{
-			if (glowEnt.playersWithSight[i] == 0)
-			{
-				glowEnt.playersWithSight[i] = userid;
-				break;
-			}
-		}
+		glowEnt.playersWithSight[client] = userid;
 	}
 }
 
@@ -171,7 +181,7 @@ Action OnGlowTransmit(int glowEntIndex, int client)
 	GetGlowEntOfEntRef(EntIndexToEntRef(glowEntIndex), glowEnt, unneeded);
 
 	//Are they registered as having LOS?
-	if (FindClientInSightArray(glowEnt, client) == -1)
+	if (!IsClientInSightArray(glowEnt, client))
 		SetVariantString("190 197 40 0");
 
 	//Are they alive?
@@ -190,15 +200,37 @@ Action OnGlowTransmit(int glowEntIndex, int client)
 	return Plugin_Continue;
 }
 
-int FindClientInSightArray(const GlowEntity glowEnt, int client)
+void GlowOnClientDisconnect(int client)
 {
-	int userid = GetClientUserId(client);
-	for (int i = 0; i < sizeof glowEnt.playersWithSight; i++)
+	for (int i = 0; i < allGlowEntities.Length; i++)
 	{
-		if (glowEnt.playersWithSight[i] == userid)
-			return i;
+		GlowEntity glowEnt;
+		allGlowEntities.GetArray(i, glowEnt);
+		if (IsClientInSightArray(glowEnt, client))
+		{
+			RemoveClientFromSightArray(client, glowEnt);
+			allGlowEntities.SetArray(i, glowEnt);
+		}
 	}
-	return -1;
+}
+
+bool IsClientInSightArray(GlowEntity glowEnt, int client)
+{
+	if (!IsClientConnected(client))
+	{
+		return false;
+	}
+	else if (glowEnt.playersWithSight[client] == 0)
+	{
+		return false;
+	}
+	else if (GetClientOfUserId(glowEnt.playersWithSight[client]) != client)
+	{
+		//uh oh! this client slot has a different player in it!
+		LogError("Warning: GlowEnt sight array wrong!");
+		return false;
+	}
+	else return true;
 }
 
 //get the GlowEntity object that corresponds to this tf_glow refrence from allGlowEntities.
