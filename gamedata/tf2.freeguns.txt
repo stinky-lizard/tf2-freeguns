@@ -36,12 +36,6 @@
 				"linux"		"6"
 				"mac"		"6"
 			}
-			"CTFWeaponBase::UpdateHands"
-			{
-				"windows"	"387"
-				"linux"		"394"
-				"mac"		"394"
-			}
 		}
 	}
 }
