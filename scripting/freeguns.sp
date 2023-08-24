@@ -298,6 +298,9 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 	#endif
 
 	//can't just equip iWeaponEnt bc that's the tf_dropped_weapon
+
+	//for some fucking reason, using EquipPlayerWeapon fucks with sigsegv
+	//but its what allows vm wearables
 	if (hReturn.Value) SDKCall(hSDKCallUpdateHands, iEquippedWeaponEnt);
 	// if (hReturn.Value) EquipPlayerWeapon(iPlayer, iEquippedWeaponEnt);
 
@@ -319,7 +322,7 @@ MRESReturn GetEntDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams
 
 	TF2_SetPlayerClass(iPlayer, GetSavedClass(iPlayer, "CurrentWeaponClass"), _, false);
 
-	//ough fuck you rafradek
+	//ough fuck you rafradek why does this give the vm wearable
 	if (hParams.Get(1) > -1 && hParams.Get(1) < 3)
 	{
 		//we dont need the fucking wearables!
