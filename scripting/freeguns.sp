@@ -43,7 +43,7 @@ ConVar enabledVar;
 #include <freeguns_glow>
 #include <freeguns_hud>
 // #include <freeguns_model>
-// #define DEBUG
+#define DEBUG
 
 public void OnEntityCreated(int entity, const char[] classname)
 {
@@ -279,10 +279,25 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 
 	TF2_SetPlayerClass(iPlayer, GetSavedClass(iPlayer, "CurrentClass"), _, false);
 
+
 	//for sigsegv
 	Address weaponMemAddress = hParams.GetAddress(1);
 	int iWeaponEnt = GetEntityFromAddress(weaponMemAddress);
-	EquipPlayerWeapon(iPlayer, iWeaponEnt);
+
+	int iEquippedWeaponEnt, equippedWeaponSlot;
+
+	GetClassOfWeapon(iWeaponEnt, equippedWeaponSlot, TF2_GetPlayerClass(iPlayer));
+
+	iEquippedWeaponEnt = GetPlayerWeaponSlot(iPlayer, equippedWeaponSlot);
+
+	#if defined DEBUG
+		PrintToServer("Weapon is in slot %i!", equippedWeaponSlot);
+		char classname[64];
+		GetEntityClassname(iEquippedWeaponEnt, classname, sizeof classname);
+		PrintToServer("Equipping %i : %s!", iEquippedWeaponEnt, classname);
+	#endif
+
+	EquipPlayerWeapon(iPlayer, iEquippedWeaponEnt);
 
 
 	//we're done! delete the user's key
@@ -349,7 +364,7 @@ void SaveClasses(int client, int weapon)
 	TFClassType desiredClass;
 
 	int loadoutSlotUsedByPickup;
-	desiredClass = GetClassOfWeapon(weapon, loadoutSlotUsedByPickup);
+	desiredClass = GetClassOfWeapon(weapon, loadoutSlotUsedByPickup, curClass);
 
 	char userIdStr[32];
 	IntToString(GetClientUserId(client), userIdStr, sizeof userIdStr);
@@ -383,7 +398,7 @@ void SaveClasses(int client, int weapon)
 
 	int weaponToDrop = GetPlayerWeaponSlot(client, weaponSlotUsedByPickup);
 	if (weaponToDrop != -1)
-		savedData.SetNum("CurrentWeaponClass", view_as<int>(GetClassOfWeapon(weaponToDrop, unneeded)));
+		savedData.SetNum("CurrentWeaponClass", view_as<int>(GetClassOfWeapon(weaponToDrop, unneeded, curClass)));
 	#if defined DEBUG
 		else
 			//they don't have a weapon in this slot, so they don't have a weapon to drop
@@ -397,12 +412,23 @@ void SaveClasses(int client, int weapon)
 	savedData.Rewind();
 }
 
-TFClassType GetClassOfWeapon(int weapon, int& loadoutSlot)
+TFClassType GetClassOfWeapon(int weapon, int& loadoutSlot, TFClassType currentClass = TFClass_Unknown)
 {
 	TFClassType out;
 
 	//get the item's definition index
 	int iWeaponDef = GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex");
+
+	if (currentClass != TFClass_Unknown)
+	{
+		int tempSlot = TF2Econ_GetItemLoadoutSlot(iWeaponDef, currentClass);
+		if (tempSlot != -1)
+		{
+			//the weapon works with their current class
+			loadoutSlot = tempSlot;
+			return currentClass;
+		}
+	}
 
 	//check each class for if this weapon supports it
 	//Civilian/Unknown left out bc i dont know if that actually works ingame
