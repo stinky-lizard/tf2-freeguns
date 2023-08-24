@@ -164,7 +164,7 @@ Action OnGlowTransmit(int glowEntIndex, int client)
 	//This is where we disable certain players from seeing it.
 	//May be incredibly resource intensive...
 
-	SetVariantString("190 197 40 255");
+	// SetVariantString("190 197 40 255");
 
 
 	GlowEntity glowEnt;
@@ -173,15 +173,15 @@ Action OnGlowTransmit(int glowEntIndex, int client)
 
 	//Are they registered as having LOS?
 	if (FindClientInSightArray(glowEnt, client) == -1)
-		SetVariantString("190 197 40 0");
+		return Plugin_Handled;
 
 	//Are they alive?
 	if (!IsPlayerAlive(client))
-		SetVariantString("190 197 40 0");
+		return Plugin_Handled;
 
 	//Are they a disguised or invisible spy?
 	if (TF2_IsPlayerInCondition(client, TFCond_Disguised) || TF2_IsPlayerInCondition(client, TFCond_Stealthed))
-		SetVariantString("190 197 40 0");
+		return Plugin_Handled;
 
 	AcceptEntityInput(glowEntIndex, "SetGlowColor");
 
