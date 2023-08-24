@@ -8,7 +8,7 @@
 
 #include <tf_econ_data>
 
-#define PLUGIN_VERSION "1.2.4-beta"
+#define PLUGIN_VERSION "1.2.4"
 
 public Plugin myinfo =
 {
