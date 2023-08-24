@@ -34,6 +34,7 @@ DynamicDetour hCanPickupDroppedWeaponDetour;
 DynamicDetour hPickupWeaponFromOtherDetour;
 DynamicDetour hGetEntityForLoadoutSlot;
 Handle hSDKCallGetBaseEntity;
+Handle hSDKCallUpdateHands;
 
 KeyValues savedData;
 
@@ -96,6 +97,11 @@ public void OnPluginStart()
 	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
 	hSDKCallGetBaseEntity = EndPrepSDKCall();
 	if (!hSDKCallGetBaseEntity) SetFailState("Failed to setup SDKCall for GetBaseEntity. (Error code 101)");
+
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CTFWeaponBase::UpdateHands");
+	hSDKCallUpdateHands = EndPrepSDKCall();
+	if (!hSDKCallUpdateHands) SetFailState("Failed to setup SDKCall for UpdateHands. (Error code 102)");
 
 	//TODO: update function signatures and see if they can be made better
 
@@ -292,7 +298,8 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 	#endif
 
 	//can't just equip iWeaponEnt bc that's the tf_dropped_weapon
-	if (hReturn.Value) EquipPlayerWeapon(iPlayer, iEquippedWeaponEnt);
+	if (hReturn.Value) SDKCall(hSDKCallUpdateHands, iEquippedWeaponEnt);
+	// if (hReturn.Value) EquipPlayerWeapon(iPlayer, iEquippedWeaponEnt);
 
 	//we're done! delete the user's key
 	char userIdStr[32];
@@ -336,15 +343,15 @@ MRESReturn GetEntDetour_Post(int iPlayer, DHookReturn hReturn, DHookParam hParam
 				char model[PLATFORM_MAX_PATH];
 				GetEntPropString(hReturn.Value, Prop_Data, "m_ModelName", model, sizeof model);
 				PrintToServer("VM Wearable Model: %s", model);
-				for (int i = 0; i < 32; i++)
-				{
-					int ent;
-					ent = GetPlayerWeaponSlot(iPlayer, i);
-					if (ent == -1) continue;
-					GetEntityClassname(ent, clsname, sizeof clsname);
-					PrintToServer("Item in slot %i : %s", i , clsname);
+			}
+			for (int i = 0; i < 32; i++)
+			{
+				int ent;
+				ent = GetPlayerWeaponSlot(iPlayer, i);
+				if (ent == -1) continue;
+				GetEntityClassname(ent, clsname, sizeof clsname);
+				PrintToServer("Item in slot %i : %s", i , clsname);
 
-				}
 			}
 		}
 		else PrintToServer("Found nothing for needed slot %i...", hParams.Get(1));
