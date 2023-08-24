@@ -34,6 +34,7 @@ DynamicDetour hCanPickupDroppedWeaponDetour;
 DynamicDetour hPickupWeaponFromOtherDetour;
 DynamicDetour hGetEntityForLoadoutSlot;
 Handle hSDKCallGetBaseEntity;
+Handle hSDKCallUpdateHands;
 
 KeyValues savedData;
 
@@ -96,6 +97,11 @@ public void OnPluginStart()
 	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
 	hSDKCallGetBaseEntity = EndPrepSDKCall();
 	if (!hSDKCallGetBaseEntity) SetFailState("Failed to setup SDKCall for GetBaseEntity. (Error code 101)");
+
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CTFWeaponBase::UpdateHands");
+	hSDKCallUpdateHands = EndPrepSDKCall();
+	if (!hSDKCallUpdateHands) SetFailState("Failed to setup SDKCall for UpdateHands. (Error code 102)");
 
 	//TODO: update function signatures and see if they can be made better
 
@@ -223,7 +229,6 @@ MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hPar
 	Address weaponMemAddress = hParams.GetAddress(1);
 	int iWeaponEnt = GetEntityFromAddress(weaponMemAddress);
 	SaveClasses(iPlayer, iWeaponEnt);
-
 	#if defined DEBUG
 		PrintToServer("CanPickPre: Switch to desired class (%i)", GetSavedClass(iPlayer, "DesiredClass"));
 	#endif
@@ -277,10 +282,8 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 	//for sigsegv
 	Address weaponMemAddress = hParams.GetAddress(1);
 	int iWeaponEnt = GetEntityFromAddress(weaponMemAddress);
-	DataPack data = new DataPack();
-	data.WriteCell(iPlayer);
-	data.WriteCell(iWeaponEnt);
-	RequestFrame(OnNextFramePickup, data);
+	EquipPlayerWeapon(iPlayer, iWeaponEnt);
+
 
 	//we're done! delete the user's key
 	char userIdStr[32];
@@ -290,20 +293,6 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 	savedData.Rewind();
 
 	return MRES_Handled;
-}
-
-void OnNextFramePickup(DataPack data)
-{
-	data.Reset();
-	int iPlayer = data.ReadCell();
-	int iWeaponEnt = data.ReadCell();
-
-	iWeaponEnt = CreateEntityByName("tf_weapon_scattergun");
-	DispatchSpawn(iWeaponEnt);
-
-	EquipPlayerWeapon(iPlayer, iWeaponEnt);
-
-	delete data;
 }
 
 MRESReturn GetEntDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams)
