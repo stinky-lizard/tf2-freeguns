@@ -24,6 +24,8 @@ void HudOnEntityCreated(int entity, const char[] classname)
 
 void DroppedWeaponNextFrame(int entityref)
 {
+	if (!IsValidEntity(entityref)) return;
+	
 	int worldtext = CreateEntityByName("point_worldtext");
 
 	char messagetext[256], topspacer[32], bottomspacer[32], clientname[MAX_NAME_LENGTH], qualityname[16], itemname[64];
