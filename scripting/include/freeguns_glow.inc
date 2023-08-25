@@ -13,7 +13,7 @@
 	//if hud included is already defined, then these are already declared/defined there
 	//usually glow would be included first, but if it's included second then hud would have already done this
 
-ConVar glowVar, glowTimerVar, glowRadVar;
+ConVar glowVar, glowTimerVar, glowRadVar, glowLookVar;
 //I wished there's a more elegant solution than this, but it seems that's all for naught :(
 ArrayList allGlowEntities;
 
@@ -71,7 +71,10 @@ void GlowOnEntityCreated(int weaponEnt, const char[] classname)
 	SetEdictFlags(glowEnt.entRef, GetEdictFlags(glowEnt.entRef) & ~FL_EDICT_ALWAYS);
 	SDKHook(glowEnt.entRef, SDKHook_SetTransmit, OnGlowTransmit);
 
-	CreateTimer(glowTimerVar.FloatValue, CalculateLineOfSight, glowEnt.entRef, TIMER_REPEAT);
+	if (!glowLookVar.BoolValue)
+	{
+		CreateTimer(glowTimerVar.FloatValue, CalculateLineOfSight, glowEnt.entRef, TIMER_REPEAT);
+	}
 }
 
 Action CalculateLineOfSight(Handle timer, int glowEntRef)
@@ -174,11 +177,22 @@ Action OnGlowTransmit(int glowEntIndex, int client)
 	//This is where we disable certain players from seeing it.
 	//May be incredibly resource intensive...
 
-
-
 	GlowEntity glowEnt;
 	int unneeded;
 	GetGlowEntOfEntRef(EntIndexToEntRef(glowEntIndex), glowEnt, unneeded);
+
+	//requested by twilight
+	if (glowLookVar.BoolValue)
+	{
+		int weapon = GetEntPropEnt(glowEntIndex, Prop_Data, "m_hParent");
+		if (CanClientPickUpWeapon(client, weapon))
+			SetVariantString("190 197 40 255");
+		else
+			SetVariantString("190 197 40 0");
+		
+		AcceptEntityInput(glowEntIndex, "SetGlowColor");
+		return Plugin_Continue;
+	}
 
 	//Are they registered as having LOS?
 	if (!IsClientInSightArray(glowEnt, client))

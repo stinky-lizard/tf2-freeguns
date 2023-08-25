@@ -8,7 +8,7 @@
 
 #include <tf_econ_data>
 
-#define PLUGIN_VERSION "1.2.5"
+#define PLUGIN_VERSION "1.2.6.2"
 
 public Plugin myinfo =
 {
@@ -66,6 +66,7 @@ public void OnPluginStart()
 
 	#if defined __freeguns_glow_included
 		glowVar = CreateConVar("sm_freeguns_glow", "1", "Enable/disable custom weapon glow. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
+		glowLookVar = CreateConVar("sm_freeguns_glow_lookonly", "1", "Only glow when looking directly at a weapon.", FCVAR_REPLICATED);
 		glowTimerVar = CreateConVar("sm_freeguns_glow_timer", "0.3", "How often (in seconds) to update weapon glows. Make smaller to make it look nicer, or make larger to help with performance.", FCVAR_REPLICATED, true, 0.1);
 		glowRadVar = CreateConVar("sm_freeguns_glow_radius", "500", "How far (in units) dropped weapons should glow for players. Increase this to convey more info to the player, or reduce to potentially reduce visual noise/clutter.", FCVAR_REPLICATED);
 		allGlowEntities = new ArrayList(sizeof GlowEntity);
