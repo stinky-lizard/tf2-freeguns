@@ -252,11 +252,11 @@ MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hPar
 		&& StrEqual(weaponItemDefClassname, "tf_weapon_revolver")
 	)
 	{
-		#if defined DEBUG
-			PrintToServer("CanPickPre: Weapon is a revolver! Disabling pickup");
-		#endif
 		if (TF2_GetPlayerClass(iPlayer) != TFClass_Spy)
 		{
+			#if defined DEBUG
+				PrintToServer("CanPickPre: Weapon is a revolver (and player is not spy)! Disabling pickup");
+			#endif
 			disabled = true;
 			hReturn.Value = false;
 		}
