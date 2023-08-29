@@ -136,6 +136,7 @@ void MoveWorldtextAboveParent(int worldtext, int weapon)
 }
 
 
+//if the client is looking at the weapon and is in range
 bool CanClientPickUpWeapon(int client, int weapon)
 {
 	if (!IsClientInRange(client, weapon)) return false;

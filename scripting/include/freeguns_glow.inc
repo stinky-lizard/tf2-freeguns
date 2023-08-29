@@ -186,29 +186,26 @@ Action OnGlowTransmit(int glowEntIndex, int client)
 	{
 		int weapon = GetEntPropEnt(glowEntIndex, Prop_Data, "m_hParent");
 		if (CanClientPickUpWeapon(client, weapon))
-			SetVariantString("190 197 40 255");
+			SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 0);
 		else
-			SetVariantString("190 197 40 0");
+			SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 1);
 		
-		AcceptEntityInput(glowEntIndex, "SetGlowColor");
 		return Plugin_Continue;
 	}
 
 	//Are they registered as having LOS?
 	if (!IsClientInSightArray(glowEnt, client))
-		SetVariantString("190 197 40 0");
+		SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 0);
 
 	//Are they alive?
 	else if (!IsPlayerAlive(client))
-		SetVariantString("190 197 40 0");
+		SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 0);
 
 	//Are they a disguised or invisible spy?
 	else if (TF2_IsPlayerInCondition(client, TFCond_Disguised) || TF2_IsPlayerInCondition(client, TFCond_Stealthed))
-		SetVariantString("190 197 40 0");
-
-	else SetVariantString("190 197 40 255");
-
-	AcceptEntityInput(glowEntIndex, "SetGlowColor");
+		SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 0);
+		
+	else SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 1);
 
 	// If all of these questions are true, then they can see it.
 	return Plugin_Continue;
