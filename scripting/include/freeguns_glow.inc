@@ -195,17 +195,17 @@ Action OnGlowTransmit(int glowEntIndex, int client)
 
 	//Are they registered as having LOS?
 	if (!IsClientInSightArray(glowEnt, client))
-		SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 0);
+		SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 1);
 
 	//Are they alive?
 	else if (!IsPlayerAlive(client))
-		SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 0);
+		SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 1);
 
 	//Are they a disguised or invisible spy?
 	else if (TF2_IsPlayerInCondition(client, TFCond_Disguised) || TF2_IsPlayerInCondition(client, TFCond_Stealthed))
-		SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 0);
+		SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 1);
 		
-	else SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 1);
+	else SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 0);
 
 	// If all of these questions are true, then they can see it.
 	return Plugin_Continue;
