@@ -138,6 +138,6 @@
 	}
 	"TF_WEAPON_PASSTIME_GUN"
 	{
-		"en"	"Passtime Gun"
+		"en"	"JACK"
 	}
 }
