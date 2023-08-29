@@ -291,6 +291,12 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 
 	TF2_SetPlayerClass(iPlayer, GetSavedClass(iPlayer, "CurrentClass"), _, false);
 
+	//we're done! delete the user's key
+	char userIdStr[32];
+	IntToString(GetClientUserId(iPlayer), userIdStr, sizeof userIdStr);
+	savedData.JumpToKey("Classes");
+	savedData.DeleteKey(userIdStr);
+	savedData.Rewind();
 
 	//for sigsegv
 	Address weaponMemAddress = hParams.GetAddress(1);
@@ -313,15 +319,8 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 
 	//for some fucking reason, using EquipPlayerWeapon fucks with sigsegv
 	//but its what allows vm wearables
-	if (hReturn.Value) SDKCall(hSDKCallUpdateHands, iEquippedWeaponEnt);
+	if (hReturn.Value && IsValidEntity(iEquippedWeaponEnt)) SDKCall(hSDKCallUpdateHands, iEquippedWeaponEnt);
 	// if (hReturn.Value) EquipPlayerWeapon(iPlayer, iEquippedWeaponEnt);
-
-	//we're done! delete the user's key
-	char userIdStr[32];
-	IntToString(GetClientUserId(iPlayer), userIdStr, sizeof userIdStr);
-	savedData.JumpToKey("Classes");
-	savedData.DeleteKey(userIdStr);
-	savedData.Rewind();
 
 	return MRES_Handled;
 }
