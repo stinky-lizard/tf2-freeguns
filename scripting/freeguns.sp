@@ -43,7 +43,7 @@ ConVar enabledVar;
 #include <freeguns_glow>
 #include <freeguns_hud>
 // #include <freeguns_model>
-// #define DEBUG
+#define DEBUG
 
 public void OnEntityCreated(int entity, const char[] classname)
 {
@@ -239,8 +239,30 @@ MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hPar
 
 	//to get class from item schema, get item itself first
 	Address weaponMemAddress = hParams.GetAddress(1);
-	int iWeaponEnt = GetEntityFromAddress(weaponMemAddress);
-	SaveClasses(iPlayer, iWeaponEnt);
+	int weaponEntity = GetEntityFromAddress(weaponMemAddress);
+
+	//All revolvers are broken. disable it if its one of those
+	int weaponItemDefinitionIndex = GetEntProp(weaponEntity, Prop_Send, "m_iItemDefinitionIndex");
+	char weaponItemDefClassname[64];
+
+	bool disabled = false;
+	if
+	(
+		TF2Econ_GetItemClassName(weaponItemDefinitionIndex, weaponItemDefClassname, sizeof weaponItemDefClassname)
+		&& StrEqual(weaponItemDefClassname, "tf_weapon_revolver")
+	)
+	{
+		#if defined DEBUG
+			PrintToServer("CanPickPre: Weapon is a revolver! Disabling pickup");
+		#endif
+		if (TF2_GetPlayerClass(iPlayer) != TFClass_Spy)
+		{
+			disabled = true;
+			hReturn.Value = false;
+		}
+	}
+
+	SaveClasses(iPlayer, weaponEntity, disabled);
 	#if defined DEBUG
 		PrintToServer("CanPickPre: Switch to desired class (%i)", GetSavedClass(iPlayer, "DesiredClass"));
 	#endif
@@ -398,13 +420,17 @@ int GetEntityFromAddress(Address pEntity)
 }
 
 //get the class for the weapon from the item schema, and save that and the current class to savedData
-void SaveClasses(int client, int weapon)
+void SaveClasses(int client, int weapon, bool disabled = false)
 {
 	TFClassType curClass = TF2_GetPlayerClass(client);
 	TFClassType desiredClass;
 
 	int loadoutSlotUsedByPickup;
-	desiredClass = GetClassOfWeapon(weapon, loadoutSlotUsedByPickup, curClass);
+
+	if (disabled)
+		desiredClass = curClass;
+	else
+		desiredClass = GetClassOfWeapon(weapon, loadoutSlotUsedByPickup, curClass);
 
 	char userIdStr[32];
 	IntToString(GetClientUserId(client), userIdStr, sizeof userIdStr);
