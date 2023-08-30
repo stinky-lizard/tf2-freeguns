@@ -326,7 +326,7 @@ MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam
 
 	int iEquippedWeaponEnt, equippedWeaponSlot;
 
-	GetClassOfWeapon(iDroppedWeaponEnt, equippedWeaponSlot, TF2_GetPlayerClass(iPlayer));
+	GetClassOfDroppedWeapon(iDroppedWeaponEnt, equippedWeaponSlot, TF2_GetPlayerClass(iPlayer));
 
 	iEquippedWeaponEnt = GetPlayerWeaponSlot(iPlayer, equippedWeaponSlot);
 
@@ -432,7 +432,7 @@ void SaveClasses(int client, int weapon, bool disabled = false)
 	if (disabled)
 		desiredClass = curClass;
 	else
-		desiredClass = GetClassOfWeapon(weapon, loadoutSlotUsedByPickup, curClass);
+		desiredClass = GetClassOfDroppedWeapon(weapon, loadoutSlotUsedByPickup, curClass);
 
 	char userIdStr[32];
 	IntToString(GetClientUserId(client), userIdStr, sizeof userIdStr);
@@ -450,7 +450,7 @@ void SaveClasses(int client, int weapon, bool disabled = false)
 
 	int weaponToDrop = GetPlayerWeaponSlot(client, weaponSlotUsedByPickup);
 	if (weaponToDrop != -1)
-		savedData.SetNum("CurrentWeaponClass", view_as<int>(GetClassOfWeapon(weaponToDrop, unneeded, curClass)));
+		savedData.SetNum("CurrentWeaponClass", view_as<int>(GetClassOfDroppedWeapon(weaponToDrop, unneeded, curClass)));
 	#if defined DEBUG
 		else
 			//they don't have a weapon in this slot, so they don't have a weapon to drop
@@ -488,7 +488,7 @@ int GetWeaponSlotFromLoadoutSlot(int loadoutSlot)
 	return weaponSlot;
 }
 
-TFClassType GetClassOfWeapon(int weapon, int& loadoutSlot, TFClassType currentClass)
+TFClassType GetClassOfDroppedWeapon(int weapon, int& loadoutSlot, TFClassType currentClass)
 {
 	TFClassType out;
 
@@ -566,8 +566,16 @@ bool DoesClientHaveWeaponToDrop(int client, int droppedWeaponEnt)
 	GetEntityClassname(droppedWeaponEnt, classname, sizeof classname);
 	if (!StrEqual(classname, "tf_dropped_weapon")) return false;
 
-	int weaponItemDefinitionIndex = GetEntProp(droppedWeaponEnt, Prop_Send, "m_iItemDefinitionIndex");
-	int loadoutSlot = TF2Econ_GetItemLoadoutSlot(weaponItemDefinitionIndex, TF2_GetPlayerClass(client));
+	int loadoutSlot;
+	GetClassOfDroppedWeapon(droppedWeaponEnt, loadoutSlot, TF2_GetPlayerClass(client));
 	int weaponSlot = GetWeaponSlotFromLoadoutSlot(loadoutSlot);
+
+
+	//todo fuck. have to use GetEntityForLoadoutSlot
+	int weapon = GetPlayerWeaponSlot(client, weaponSlot);
+	char classname2[64];
+	GetEntityClassname(weapon, classname2, 64);
+	PrintToChatAll("%i : %s", weaponSlot, classname2);
+
 	return GetPlayerWeaponSlot(client, weaponSlot) != -1;
 }

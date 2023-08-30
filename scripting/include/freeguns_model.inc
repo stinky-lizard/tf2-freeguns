@@ -241,7 +241,7 @@ bool getDesiredClass(int client, int weapon, TFClassType& out_desiredClass)
 	}
 
 	int unneeded;
-	out_desiredClass = origClass ?  TF2_GetPlayerClass(client) : GetClassOfWeapon(weapon, unneeded);
+	out_desiredClass = origClass ?  TF2_GetPlayerClass(client) : GetClassOfDroppedWeapon(weapon, unneeded);
 
 	return true;
 }
