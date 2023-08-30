@@ -138,23 +138,16 @@ Action OnHudTransmit(int worldtext, int client)
 	else return Plugin_Handled;
 }
 
-
 void MoveWorldtextAboveParent(int worldtext, int weapon)
 {
-	static float lastTimeMoved; //todo this is affected by other weapons that players are looking at
-	if (GetGameTime() > lastTimeMoved + 0.2)
-	{
-		lastTimeMoved = GetGameTime();
 
-		float weaponpos[3];
-		GetEntPropVector(weapon, Prop_Data, "m_vecAbsOrigin", weaponpos);
-		weaponpos[2] += WORLDTEXTHEIGHT;
-		AcceptEntityInput(worldtext, "ClearParent");
-		SetEntPropVector(worldtext, Prop_Send, "m_vecOrigin", weaponpos);
-		SetVariantString("!activator");
-		AcceptEntityInput(worldtext, "SetParent", weapon);
-
-	}
+	float weaponpos[3];
+	GetEntPropVector(weapon, Prop_Data, "m_vecAbsOrigin", weaponpos);
+	weaponpos[2] += WORLDTEXTHEIGHT;
+	AcceptEntityInput(worldtext, "ClearParent");
+	SetEntPropVector(worldtext, Prop_Send, "m_vecOrigin", weaponpos);
+	SetVariantString("!activator");
+	AcceptEntityInput(worldtext, "SetParent", weapon);
 }
 
 //if the client is looking at the weapon and is in range
