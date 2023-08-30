@@ -25,10 +25,24 @@ enum struct GlowEntity
 	int playersWithSight[MAXPLAYERS];
 }
 
-void GlowOnEntityCreated(int weaponEnt, const char[] classname)
+void GlowOnEntityCreated(int droppedWeaponEnt, const char[] classname)
 {
 	if (!StrEqual(classname, "tf_dropped_weapon") || !enabledVar.BoolValue || !glowVar.BoolValue || !mapLoaded)
 		return;
+
+	RequestFrame(GlowOnNextFrame, EntIndexToEntRef(droppedWeaponEnt));
+}
+
+void GlowOnNextFrame(int droppedWeaponEntRef) {
+
+	if (!IsValidEntity(droppedWeaponEntRef))
+	{
+		return;
+	}
+
+	int droppedWeaponEnt = EntRefToEntIndex(droppedWeaponEntRef);
+
+	if (DroppedWeaponIsDisabled(droppedWeaponEnt)) return;
 
 	GlowEntity glowEnt;
 
@@ -49,18 +63,18 @@ void GlowOnEntityCreated(int weaponEnt, const char[] classname)
 	AcceptEntityInput(glowEnt.entRef, "SetGlowColor");
 
 	char entTargetname[128];
-	Format(entTargetname, sizeof entTargetname, "tf_dropped_weapon%i", EntIndexToEntRef(weaponEnt));
-	DispatchKeyValue(weaponEnt, "targetname", entTargetname);
+	Format(entTargetname, sizeof entTargetname, "tf_dropped_weapon%i", EntIndexToEntRef(droppedWeaponEnt));
+	DispatchKeyValue(droppedWeaponEnt, "targetname", entTargetname);
 
 	DispatchKeyValue(glowEnt.entRef, "target", entTargetname);
 
 	float weapOrigin[3];
-	GetEntPropVector(weaponEnt, Prop_Send, "m_vecOrigin", weapOrigin);
+	GetEntPropVector(droppedWeaponEnt, Prop_Send, "m_vecOrigin", weapOrigin);
 	TeleportEntity(glowEnt.entRef, weapOrigin);
 
 	SetVariantString("!activator");
-	AcceptEntityInput(glowEnt.entRef, "SetParent", weaponEnt);
-	glowEnt.parentRef = EntIndexToEntRef(weaponEnt);
+	AcceptEntityInput(glowEnt.entRef, "SetParent", droppedWeaponEnt);
+	glowEnt.parentRef = EntIndexToEntRef(droppedWeaponEnt);
 
 	DispatchSpawn(glowEnt.entRef);
 
@@ -103,7 +117,7 @@ Action CalculateLineOfSight(Handle timer, int glowEntRef)
 
 		GetClientEyePosition(client, eyepos);
 		GetEntPropVector(glowEnt.parentRef, Prop_Send, "m_vecOrigin", glowpos);
-		
+
 		//Are they close enough?
 		//Don't show it if they're too far. If they are, it'll just be too much visual noise
 
@@ -146,7 +160,7 @@ Action CalculateLineOfSight(Handle timer, int glowEntRef)
 }
 
 void RemoveClientFromSightArray(int client, GlowEntity glowEnt, bool force = false)
-{	
+{
 	if (force)
 	{
 		glowEnt.playersWithSight[client] = 0;
@@ -189,7 +203,7 @@ Action OnGlowTransmit(int glowEntIndex, int client)
 			SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 0);
 		else
 			SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 1);
-		
+
 		return Plugin_Continue;
 	}
 
@@ -204,7 +218,7 @@ Action OnGlowTransmit(int glowEntIndex, int client)
 	//Are they a disguised or invisible spy?
 	else if (TF2_IsPlayerInCondition(client, TFCond_Disguised) || TF2_IsPlayerInCondition(client, TFCond_Stealthed))
 		SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 1);
-		
+
 	else SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 0);
 
 	// If all of these questions are true, then they can see it.

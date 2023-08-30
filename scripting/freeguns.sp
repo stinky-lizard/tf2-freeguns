@@ -355,12 +355,14 @@ MRESReturn GetEntDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams
 
 	TF2_SetPlayerClass(iPlayer, GetSavedClass(iPlayer, "CurrentWeaponClass"), _, false);
 
-	//ough fuck you rafradek why does this give the vm wearable
 	if (hParams.Get(1) > -1 && hParams.Get(1) < 3)
 	{
-		//we dont need the fucking wearables!
-		hReturn.Value = GetPlayerWeaponSlot(iPlayer, hParams.Get(1));
-		return MRES_Override;
+		//if you have a vm_wearable, it seems getent will pick that up before the actual weapon
+		//we dont need the wearable. we need the actual entity.
+
+		//TODO: FIX ME!!! hParams.Get(1) is the LOADOUT slot, we need to convert that to whatever the corresponding WEAPON slot is
+		// hReturn.Value = GetPlayerWeaponSlot(iPlayer, hParams.Get(1));
+		// return MRES_Override;
 	}
 
 	return MRES_Handled;
@@ -443,29 +445,8 @@ void SaveClasses(int client, int weapon, bool disabled = false)
 	//finally, we need to save the class of the weapon we currently have (in the relevant slot, not the one that's out), since that might not necessarily be our player class
 	//if we have a foreign weapon, GetEntityForLoadoutSlot won't find a weapon that matches our class (because we don't have one).
 
-	int unneeded, weaponSlotUsedByPickup;
-	weaponSlotUsedByPickup = 99; //just to be safe
-
-	//have to translate the relevant LOADOUT slot to the relevant WEAPON slot. They are not defined the same way, and some values match differently.
-	//i.e. (the pda's and revolver)
-	//Since we're only dealing with weapons you can pick up, we only really need to deal with the three main weapon slots.
-
-	char weaponSlotName[64];
-	TF2Econ_TranslateLoadoutSlotIndexToName(loadoutSlotUsedByPickup, weaponSlotName, sizeof weaponSlotName);
-	if (StrEqual(weaponSlotName, "primary")) weaponSlotUsedByPickup = TFWeaponSlot_Primary;
-	if (StrEqual(weaponSlotName, "secondary")) weaponSlotUsedByPickup = TFWeaponSlot_Secondary;
-	if (StrEqual(weaponSlotName, "melee")) weaponSlotUsedByPickup = TFWeaponSlot_Melee;
-	if (StrEqual(weaponSlotName, "building")) weaponSlotUsedByPickup = TFWeaponSlot_Building;
-
-	// //For the three main ones, loadout slot is the same as weapon slot.
-	// //I'm confident that won't change, it's too ingrained in the game.
-	// weaponSlotUsedByPickup = loadoutSlotUsedByPickup;
-
-	#if defined DEBUG
-		PrintToServer("LoadoutSlot: %i", loadoutSlotUsedByPickup);
-		PrintToServer("WeaponSlot: %i", weaponSlotUsedByPickup);
-		PrintToServer("WeaponSlotName: %s", weaponSlotName);
-	#endif
+	int unneeded;
+	int weaponSlotUsedByPickup = GetWeaponSlotFromLoadoutSlot(loadoutSlotUsedByPickup);
 
 	int weaponToDrop = GetPlayerWeaponSlot(client, weaponSlotUsedByPickup);
 	if (weaponToDrop != -1)
@@ -483,7 +464,31 @@ void SaveClasses(int client, int weapon, bool disabled = false)
 	savedData.Rewind();
 }
 
-TFClassType GetClassOfWeapon(int weapon, int& loadoutSlot, TFClassType currentClass = TFClass_Unknown)
+int GetWeaponSlotFromLoadoutSlot(int loadoutSlot)
+{
+	int weaponSlot = 99; //in case this is called on something other than these
+
+	//have to translate the relevant LOADOUT slot to the relevant WEAPON slot. They are not defined the same way, and some values match differently.
+	//(i.e. the pda's, sappers, and revolver)
+	//Since we're only dealing with weapons you can pick up, we only really need to deal with the three main weapon slots.
+
+	char weaponSlotName[64];
+	TF2Econ_TranslateLoadoutSlotIndexToName(loadoutSlot, weaponSlotName, sizeof weaponSlotName);
+	if (StrEqual(weaponSlotName, "primary")) weaponSlot = TFWeaponSlot_Primary;
+	if (StrEqual(weaponSlotName, "secondary")) weaponSlot = TFWeaponSlot_Secondary;
+	if (StrEqual(weaponSlotName, "melee")) weaponSlot = TFWeaponSlot_Melee;
+	if (StrEqual(weaponSlotName, "building")) weaponSlot = TFWeaponSlot_Building;
+
+	#if defined DEBUG
+		PrintToServer("LoadoutSlot: %i", loadoutSlot);
+		PrintToServer("WeaponSlot: %i", weaponSlot);
+		PrintToServer("WeaponSlotName: %s", weaponSlotName);
+	#endif
+
+	return weaponSlot;
+}
+
+TFClassType GetClassOfWeapon(int weapon, int& loadoutSlot, TFClassType currentClass)
 {
 	TFClassType out;
 
@@ -529,4 +534,29 @@ TFClassType GetSavedClass(int client, const char[] key)
 	TFClassType out = view_as<TFClassType>(savedData.GetNum(key));
 	savedData.Rewind();
 	return out;
+}
+
+bool DroppedWeaponIsDisabled(int droppedWeaponEnt)
+{
+	if (!IsValidEntity(droppedWeaponEnt)) return false;
+	char classname[64];
+	GetEntityClassname(droppedWeaponEnt, classname, sizeof classname);
+	if (!StrEqual(classname, "tf_dropped_weapon")) return false;
+
+	int weaponItemDefinitionIndex = GetEntProp(droppedWeaponEnt, Prop_Send, "m_iItemDefinitionIndex");
+	PrintToServer("%i", weaponItemDefinitionIndex);
+	char weaponItemDefClassname[64];
+	TF2Econ_GetItemClassName(weaponItemDefinitionIndex, weaponItemDefClassname, sizeof weaponItemDefClassname);
+	PrintToServer("%s", weaponItemDefClassname);
+	if
+	(
+		StrEqual(weaponItemDefClassname, "tf_weapon_revolver")
+		|| StrEqual(weaponItemDefClassname, "tf_weapon_sapper")
+		|| StrEqual(weaponItemDefClassname, "tf_weapon_builder")
+	)
+	{
+		//revolver, sapper, and builder are disabled
+		return true;
+	}
+	return false;
 }

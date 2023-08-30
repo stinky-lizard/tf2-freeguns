@@ -25,7 +25,7 @@ void HudOnEntityCreated(int entity, const char[] classname)
 void DroppedWeaponNextFrame(int entityref)
 {
 	if (!IsValidEntity(entityref)) return;
-	
+
 	int worldtext = CreateEntityByName("point_worldtext");
 
 	char messagetext[256], topspacer[32], bottomspacer[32], clientname[MAX_NAME_LENGTH], qualityname[16], itemname[64];
@@ -75,15 +75,37 @@ void DroppedWeaponNextFrame(int entityref)
 	DispatchKeyValueInt(worldtext, "textsize", 4);
 	DispatchKeyValueInt(worldtext, "orientation", 1);
 	DispatchKeyValue(worldtext, "color", "255 255 0 255");
+
+	if (DroppedWeaponIsDisabled(entityref))
+	{
+		DispatchKeyValue(worldtext, "color", "255 30 30 255");
+		int len = strlen("Sorry, the  is disabled!") + strlen(itemname);
+		topspacer = "";
+		bottomspacer = "";
+		CreateSpacers(len, topspacer, bottomspacer, true);
+		Format(messagetext, sizeof messagetext, "%sSorry, the %s is disabled!\n%s(Technical limitations)", topspacer, itemname, bottomspacer);
+		DispatchKeyValue(worldtext, "message", messagetext);
+	}
+
 	DispatchSpawn(worldtext);
 
 	SDKHook(worldtext, SDKHook_SetTransmit, OnHudTransmit);
 
 }
 
-void CreateSpacers(int bottomlen, char[] topspacer, char[] bottomspacer)
+void CreateSpacers(int len, char[] topspacer, char[] bottomspacer, bool disabledText = false)
 {
-	int toplen = strlen("Press Action Button (def. H) to pick up");
+	int toplen, bottomlen;
+	if (disabledText)
+	{
+		toplen = len;
+		bottomlen = strlen("(Technical limitations)");
+	}
+	else
+	{
+		toplen = strlen("Press Action Button (def. H) to pick up");
+		bottomlen = len;
+	}
 
 	if (bottomlen > toplen)
 	{
@@ -134,7 +156,6 @@ void MoveWorldtextAboveParent(int worldtext, int weapon)
 
 	}
 }
-
 
 //if the client is looking at the weapon and is in range
 bool CanClientPickUpWeapon(int client, int weapon)
