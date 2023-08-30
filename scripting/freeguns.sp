@@ -544,10 +544,8 @@ bool DroppedWeaponIsDisabled(int droppedWeaponEnt)
 	if (!StrEqual(classname, "tf_dropped_weapon")) return false;
 
 	int weaponItemDefinitionIndex = GetEntProp(droppedWeaponEnt, Prop_Send, "m_iItemDefinitionIndex");
-	PrintToServer("%i", weaponItemDefinitionIndex);
 	char weaponItemDefClassname[64];
 	TF2Econ_GetItemClassName(weaponItemDefinitionIndex, weaponItemDefClassname, sizeof weaponItemDefClassname);
-	PrintToServer("%s", weaponItemDefClassname);
 	if
 	(
 		StrEqual(weaponItemDefClassname, "tf_weapon_revolver")
@@ -559,4 +557,17 @@ bool DroppedWeaponIsDisabled(int droppedWeaponEnt)
 		return true;
 	}
 	return false;
+}
+
+bool DoesClientHaveWeaponToDrop(int client, int droppedWeaponEnt)
+{
+	if (!IsValidEntity(droppedWeaponEnt)) return false;
+	char classname[64];
+	GetEntityClassname(droppedWeaponEnt, classname, sizeof classname);
+	if (!StrEqual(classname, "tf_dropped_weapon")) return false;
+
+	int weaponItemDefinitionIndex = GetEntProp(droppedWeaponEnt, Prop_Send, "m_iItemDefinitionIndex");
+	int loadoutSlot = TF2Econ_GetItemLoadoutSlot(weaponItemDefinitionIndex, TF2_GetPlayerClass(client));
+	int weaponSlot = GetWeaponSlotFromLoadoutSlot(loadoutSlot);
+	return GetPlayerWeaponSlot(client, weaponSlot) != -1;
 }

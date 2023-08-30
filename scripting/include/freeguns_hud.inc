@@ -161,7 +161,10 @@ void MoveWorldtextAboveParent(int worldtext, int weapon)
 bool CanClientPickUpWeapon(int client, int weapon)
 {
 	if (!IsClientInRange(client, weapon)) return false;
-	if (GetClientAimTarget(client, false) == weapon) return true;
+	else if	(!IsPlayerAlive(client)) return false;
+	else if (TF2_IsPlayerInCondition(client, TFCond_Disguised) || TF2_IsPlayerInCondition(client, TFCond_Stealthed)) return false;
+	else if (GetClientAimTarget(client, false) != weapon) return false;
+	else if (DoesClientHaveWeaponToDrop(client, weapon)) return true;
 	else return false;
 }
 

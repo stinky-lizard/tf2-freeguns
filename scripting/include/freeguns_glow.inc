@@ -219,6 +219,10 @@ Action OnGlowTransmit(int glowEntIndex, int client)
 	else if (TF2_IsPlayerInCondition(client, TFCond_Disguised) || TF2_IsPlayerInCondition(client, TFCond_Stealthed))
 		SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 1);
 
+	//Do they have something to drop?
+	else if (!DoesClientHaveWeaponToDrop(client, GetEntPropEnt(glowEntIndex, Prop_Data, "m_hParent")))
+		SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 1);
+
 	else SetEntProp(glowEntIndex, Prop_Send, "m_bDisabled", 0);
 
 	// If all of these questions are true, then they can see it.
