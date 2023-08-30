@@ -8,7 +8,7 @@
 
 #include <tf_econ_data>
 
-#define PLUGIN_VERSION "1.2.7-beta1"
+#define PLUGIN_VERSION "1.2.7-beta2"
 
 public Plugin myinfo =
 {
@@ -43,7 +43,7 @@ ConVar enabledVar;
 #include <freeguns_glow>
 #include <freeguns_hud>
 // #include <freeguns_model>
-#define DEBUG
+// #define DEBUG
 
 public void OnEntityCreated(int entity, const char[] classname)
 {

@@ -141,7 +141,7 @@ Action OnHudTransmit(int worldtext, int client)
 
 void MoveWorldtextAboveParent(int worldtext, int weapon)
 {
-	static float lastTimeMoved;
+	static float lastTimeMoved; //todo this is affected by other weapons that players are looking at
 	if (GetGameTime() > lastTimeMoved + 0.2)
 	{
 		lastTimeMoved = GetGameTime();
@@ -158,6 +158,9 @@ void MoveWorldtextAboveParent(int worldtext, int weapon)
 }
 
 //if the client is looking at the weapon and is in range
+//0 = isn't looking/cant pick it up
+//1 = can pick it up
+//2 = could pick it up, but no weapon to drop
 bool CanClientPickUpWeapon(int client, int weapon)
 {
 	if (!IsClientInRange(client, weapon)) return false;
