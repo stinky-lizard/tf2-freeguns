@@ -241,11 +241,11 @@ MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hPar
 	Address weaponMemAddress = hParams.GetAddress(1);
 	int weaponEntity = GetEntityFromAddress(weaponMemAddress);
 
+
+	bool disabled = false;
 	//All revolvers are broken. disable it if its one of those
 	int weaponItemDefinitionIndex = GetEntProp(weaponEntity, Prop_Send, "m_iItemDefinitionIndex");
 	char weaponItemDefClassname[64];
-
-	bool disabled = false;
 	if
 	(
 		TF2Econ_GetItemClassName(weaponItemDefinitionIndex, weaponItemDefClassname, sizeof weaponItemDefClassname)
@@ -386,7 +386,7 @@ MRESReturn GetEntDetour_Post(int iPlayer, DHookReturn hReturn, DHookParam hParam
 				ent = GetPlayerWeaponSlot(iPlayer, i);
 				if (ent == -1) continue;
 				GetEntityClassname(ent, clsname, sizeof clsname);
-				PrintToServer("Item in slot %i : %s", i , clsname);
+				PrintToServer("Item in weapon slot %i : %s", i , clsname);
 
 			}
 		}
@@ -444,26 +444,27 @@ void SaveClasses(int client, int weapon, bool disabled = false)
 	//if we have a foreign weapon, GetEntityForLoadoutSlot won't find a weapon that matches our class (because we don't have one).
 
 	int unneeded, weaponSlotUsedByPickup;
+	weaponSlotUsedByPickup = 99; //just to be safe
 
 	//have to translate the relevant LOADOUT slot to the relevant WEAPON slot. They are not defined the same way, and some values match differently.
+	//i.e. (the pda's and revolver)
 	//Since we're only dealing with weapons you can pick up, we only really need to deal with the three main weapon slots.
 
-	// //While this might be optimizable, since it seems like the loadout slots and the weapon slots are the same for the three main ones,
-	// //I'm not sure about that. This is safer.
-	// char weaponSlotName[64];
-	// TF2Econ_TranslateLoadoutSlotIndexToName(loadoutSlotUsedByPickup, weaponSlotName, sizeof weaponSlotName);
-	// if (StrEqual(weaponSlotName, "primary")) weaponSlotUsedByPickup = TFWeaponSlot_Primary;
-	// if (StrEqual(weaponSlotName, "secondary")) weaponSlotUsedByPickup = TFWeaponSlot_Secondary;
-	// if (StrEqual(weaponSlotName, "melee")) weaponSlotUsedByPickup = TFWeaponSlot_Melee;
+	char weaponSlotName[64];
+	TF2Econ_TranslateLoadoutSlotIndexToName(loadoutSlotUsedByPickup, weaponSlotName, sizeof weaponSlotName);
+	if (StrEqual(weaponSlotName, "primary")) weaponSlotUsedByPickup = TFWeaponSlot_Primary;
+	if (StrEqual(weaponSlotName, "secondary")) weaponSlotUsedByPickup = TFWeaponSlot_Secondary;
+	if (StrEqual(weaponSlotName, "melee")) weaponSlotUsedByPickup = TFWeaponSlot_Melee;
+	if (StrEqual(weaponSlotName, "building")) weaponSlotUsedByPickup = TFWeaponSlot_Building;
 
-	//For the three main ones, loadout slot is the same as weapon slot.
-	//I'm confident that won't change, it's too ingrained in the game.
-	weaponSlotUsedByPickup = loadoutSlotUsedByPickup;
+	// //For the three main ones, loadout slot is the same as weapon slot.
+	// //I'm confident that won't change, it's too ingrained in the game.
+	// weaponSlotUsedByPickup = loadoutSlotUsedByPickup;
 
 	#if defined DEBUG
 		PrintToServer("LoadoutSlot: %i", loadoutSlotUsedByPickup);
 		PrintToServer("WeaponSlot: %i", weaponSlotUsedByPickup);
-		// PrintToServer("WeaponSlotName: %s", weaponSlotName);
+		PrintToServer("WeaponSlotName: %s", weaponSlotName);
 	#endif
 
 	int weaponToDrop = GetPlayerWeaponSlot(client, weaponSlotUsedByPickup);
