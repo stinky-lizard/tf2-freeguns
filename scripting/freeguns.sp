@@ -8,7 +8,7 @@
 
 #include <tf_econ_data>
 
-#define PLUGIN_VERSION "1.2.7-beta2"
+#define PLUGIN_VERSION "1.2.7-beta3"
 
 public Plugin myinfo =
 {
@@ -244,22 +244,28 @@ MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hPar
 
 	bool disabled = false;
 	//All revolvers are broken. disable it if its one of those
-	int weaponItemDefinitionIndex = GetEntProp(weaponEntity, Prop_Send, "m_iItemDefinitionIndex");
-	char weaponItemDefClassname[64];
-	if
-	(
-		TF2Econ_GetItemClassName(weaponItemDefinitionIndex, weaponItemDefClassname, sizeof weaponItemDefClassname)
-		&& StrEqual(weaponItemDefClassname, "tf_weapon_revolver")
-	)
+	// int weaponItemDefinitionIndex = GetEntProp(weaponEntity, Prop_Send, "m_iItemDefinitionIndex");
+	// char weaponItemDefClassname[64];
+	// if
+	// (
+	// 	TF2Econ_GetItemClassName(weaponItemDefinitionIndex, weaponItemDefClassname, sizeof weaponItemDefClassname)
+	// 	&& StrEqual(weaponItemDefClassname, "tf_weapon_revolver")
+	// )
+	// {
+	// 	if (TF2_GetPlayerClass(iPlayer) != TFClass_Spy)
+	// 	{
+	// 		#if defined DEBUG
+	// 			PrintToServer("CanPickPre: Weapon is a revolver (and player is not spy)! Disabling pickup");
+	// 		#endif
+	// 		disabled = true;
+	// 		hReturn.Value = false;
+	// 	}
+	// }
+
+	if (DroppedWeaponIsDisabled(weaponEntity))
 	{
-		if (TF2_GetPlayerClass(iPlayer) != TFClass_Spy)
-		{
-			#if defined DEBUG
-				PrintToServer("CanPickPre: Weapon is a revolver (and player is not spy)! Disabling pickup");
-			#endif
-			disabled = true;
-			hReturn.Value = false;
-		}
+		disabled = true;
+		hReturn.Value = false;
 	}
 
 	SaveClasses(iPlayer, weaponEntity, disabled);
@@ -361,8 +367,8 @@ MRESReturn GetEntDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams
 		//we dont need the wearable. we need the actual entity.
 
 		//TODO: FIX ME!!! hParams.Get(1) is the LOADOUT slot, we need to convert that to whatever the corresponding WEAPON slot is
-		// hReturn.Value = GetPlayerWeaponSlot(iPlayer, hParams.Get(1));
-		// return MRES_Override;
+		hReturn.Value = GetPlayerWeaponSlot(iPlayer, hParams.Get(1));
+		return MRES_Override;
 	}
 
 	return MRES_Handled;
@@ -551,6 +557,7 @@ bool DroppedWeaponIsDisabled(int droppedWeaponEnt)
 		StrEqual(weaponItemDefClassname, "tf_weapon_revolver")
 		|| StrEqual(weaponItemDefClassname, "tf_weapon_sapper")
 		|| StrEqual(weaponItemDefClassname, "tf_weapon_builder")
+		|| StrEqual(weaponItemDefClassname, "tf_weapon_knife")
 	)
 	{
 		//revolver, sapper, and builder are disabled
@@ -572,10 +579,11 @@ bool DoesClientHaveWeaponToDrop(int client, int droppedWeaponEnt)
 
 
 	//todo fuck. have to use GetEntityForLoadoutSlot
-	int weapon = GetPlayerWeaponSlot(client, weaponSlot);
-	char classname2[64];
-	GetEntityClassname(weapon, classname2, 64);
-	PrintToChatAll("%i : %s", weaponSlot, classname2);
+	// int weapon = GetPlayerWeaponSlot(client, weaponSlot);
+	// char classname2[64];
+	// if ()
+	// GetEntityClassname(weapon, classname2, 64);
+	// PrintToChatAll("%i : %s", weaponSlot, classname2);
 
 	return GetPlayerWeaponSlot(client, weaponSlot) != -1;
 }
