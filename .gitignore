@@ -4,3 +4,5 @@ include\tf_econ_data.inc
 scripting/include/tf_econ_data.inc
 Readme.txt
 otherplugin.sp
+extension/build
+extension/hl2sdk-manifests
