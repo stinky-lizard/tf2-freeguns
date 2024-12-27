@@ -1,14 +1,13 @@
 #pragma semicolon 1
 #pragma newdecls required
 #include <sdktools>
-#include <dhooks>
 #include <tf2_stocks>
 
 #include <sdkhooks>
 
 #include <tf_econ_data>
 
-#define PLUGIN_VERSION "1.2.7-beta3"
+#define PLUGIN_VERSION "2.0"
 
 public Plugin myinfo =
 {
@@ -30,9 +29,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	return APLRes_Success;
 }
 
-DynamicDetour hCanPickupDroppedWeaponDetour;
-DynamicDetour hPickupWeaponFromOtherDetour;
-DynamicDetour hGetEntityForLoadoutSlot;
 Handle hSDKCallGetBaseEntity;
 Handle hSDKCallUpdateHands;
 
@@ -40,7 +36,7 @@ KeyValues savedData;
 
 ConVar enabledVar;
 
-#include <freeguns_glow>
+// #include <freeguns_glow>
 #include <freeguns_hud>
 // #include <freeguns_model>
 // #define DEBUG
@@ -105,28 +101,10 @@ public void OnPluginStart()
 	hSDKCallUpdateHands = EndPrepSDKCall();
 	if (!hSDKCallUpdateHands) SetFailState("Failed to setup SDKCall for UpdateHands. (Error code 102)");
 
-	//TODO: update function signatures and see if they can be made better
-
-	hCanPickupDroppedWeaponDetour = new DynamicDetour(Address_Null, CallConv_THISCALL, ReturnType_Bool, ThisPointer_CBaseEntity);
-	if (!hCanPickupDroppedWeaponDetour) SetFailState("Failed to setup detour for CanPickup. (Error code 11)");
-	if (!hCanPickupDroppedWeaponDetour.SetFromConf(hGameConf, SDKConf_Signature, "CTFPlayer::CanPickupDroppedWeapon")) SetFailState("Failed to set signature for CanPickup detour. (Error code 12)");
-	if (!hCanPickupDroppedWeaponDetour.AddParam(HookParamType_ObjectPtr)) SetFailState("Failed to add param to CanPickup detour. (Error code 13)");
-
-	hPickupWeaponFromOtherDetour = new DynamicDetour(Address_Null, CallConv_THISCALL, ReturnType_Bool, ThisPointer_CBaseEntity);
-	if (!hPickupWeaponFromOtherDetour) SetFailState("Failed to setup detour for PickupWeapon. (Error code 21)");
-	if (!hPickupWeaponFromOtherDetour.SetFromConf(hGameConf, SDKConf_Signature, "CTFPlayer::PickupWeaponFromOther")) SetFailState("Failed to set signature for PickupWeapon detour. (Error code 22)");
-	if (!hPickupWeaponFromOtherDetour.AddParam(HookParamType_ObjectPtr)) SetFailState("Failed to add param to PickupWeapon detour. (Error code 23)");
-
-	hGetEntityForLoadoutSlot = new DynamicDetour(Address_Null, CallConv_THISCALL, ReturnType_CBaseEntity, ThisPointer_CBaseEntity);
-	if (!hGetEntityForLoadoutSlot) SetFailState("Failed to setup detour for GetEnt. (Error code 31)");
-	if (!hGetEntityForLoadoutSlot.SetFromConf(hGameConf, SDKConf_Signature, "CTFPlayer::GetEntityForLoadoutSlot")) SetFailState("Failed to set signature for GetEnt detour. (Error code 32)");
-	if (!hGetEntityForLoadoutSlot.AddParam(HookParamType_Int)) SetFailState("Failed to add param to GetEnt detour. (Error code 33)");
-	if (!hGetEntityForLoadoutSlot.AddParam(HookParamType_Bool)) SetFailState("Failed to add param to GetEnt detour. (Error code 34)");
+	//TODO: make detours extension
 
 	savedData = new KeyValues("SavedData");
 	if (!savedData) SetFailState("Failed to set up SavedData (Error code 40)");
-
-	if (GetConVarBool(enabledVar)) EnableDetours();
 
 	enabledVar.AddChangeHook(EnabledVarChanged);
 }
@@ -176,241 +154,14 @@ void EnabledVarChanged(ConVar convar, const char[] oldValue, const char[] newVal
 	{
 		//it was false, now it's true
 		LogMessage("Enabling Freeguns.");
-		EnableDetours();
+		// EnableDetours();
 	}
 	else if (StringToInt(oldValue) != 0 && StringToInt(newValue) == 0)
 	{
 		//it was true, now it's false
 		LogMessage("Disabling Freeguns.");
-		DisableDetours();
+		// DisableDetours();
 	}
-}
-
-int EnableDetours()
-{
-	int out = EnableDetours2();
-
-	if (out != 0) LogError("Failed to enable Freeguns detours. (Error code %i)", out);
-
-	return out;
-}
-
-int EnableDetours2()
-{
-	if (!hCanPickupDroppedWeaponDetour.Enable(Hook_Pre, CanPickupDetour_Pre)) return 14;
-	if (!hCanPickupDroppedWeaponDetour.Enable(Hook_Post, CanPickupDetour_Post)) return 15;
-
-	if (!hPickupWeaponFromOtherDetour.Enable(Hook_Pre, PickupWeaponDetour_Pre)) return 24;
-	if (!hPickupWeaponFromOtherDetour.Enable(Hook_Post, PickupWeaponDetour_Post)) return 25;
-
-	return 0;
-}
-
-int DisableDetours()
-{
-	int out = DisableDetours2();
-
-	if (out != 0)
-		LogError("Failed to disable Freeguns detours. (Error code %i)", out);
-	return out;
-}
-
-int DisableDetours2()
-{
-	if (!hCanPickupDroppedWeaponDetour.Disable(Hook_Pre, CanPickupDetour_Pre)) return 64;
-	if (!hCanPickupDroppedWeaponDetour.Disable(Hook_Post, CanPickupDetour_Post)) return 65;
-
-	if (!hPickupWeaponFromOtherDetour.Disable(Hook_Pre, PickupWeaponDetour_Pre)) return 74;
-	if (!hPickupWeaponFromOtherDetour.Disable(Hook_Post, PickupWeaponDetour_Post)) return 75;
-
-	return 0;
-}
-
-
-// Notes: iPlayer is the index of the player picking up the weapon. Use hReturn and hParams to change the values associated with the function.
-MRESReturn CanPickupDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams)
-{
-	#if defined DEBUG
-		PrintToServer("---------------New Pickup Process Start---------------");
-	#endif
-
-	hGetEntityForLoadoutSlot.Enable(Hook_Pre, GetEntDetour_Pre);
-	hGetEntityForLoadoutSlot.Enable(Hook_Post, GetEntDetour_Post);
-
-	//to get class from item schema, get item itself first
-	Address weaponMemAddress = hParams.GetAddress(1);
-	int weaponEntity = GetEntityFromAddress(weaponMemAddress);
-
-
-	bool disabled = false;
-	//All revolvers are broken. disable it if its one of those
-	// int weaponItemDefinitionIndex = GetEntProp(weaponEntity, Prop_Send, "m_iItemDefinitionIndex");
-	// char weaponItemDefClassname[64];
-	// if
-	// (
-	// 	TF2Econ_GetItemClassName(weaponItemDefinitionIndex, weaponItemDefClassname, sizeof weaponItemDefClassname)
-	// 	&& StrEqual(weaponItemDefClassname, "tf_weapon_revolver")
-	// )
-	// {
-	// 	if (TF2_GetPlayerClass(iPlayer) != TFClass_Spy)
-	// 	{
-	// 		#if defined DEBUG
-	// 			PrintToServer("CanPickPre: Weapon is a revolver (and player is not spy)! Disabling pickup");
-	// 		#endif
-	// 		disabled = true;
-	// 		hReturn.Value = false;
-	// 	}
-	// }
-
-	if (DroppedWeaponIsDisabled(weaponEntity))
-	{
-		disabled = true;
-		hReturn.Value = false;
-	}
-
-	SaveClasses(iPlayer, weaponEntity, disabled);
-	#if defined DEBUG
-		PrintToServer("CanPickPre: Switch to desired class (%i)", GetSavedClass(iPlayer, "DesiredClass"));
-	#endif
-
-	TF2_SetPlayerClass(iPlayer, GetSavedClass(iPlayer, "DesiredClass"), _, false);
-	return MRES_Handled;
-}
-MRESReturn CanPickupDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam hParams)
-{
-	hGetEntityForLoadoutSlot.Disable(Hook_Pre, GetEntDetour_Pre);
-	hGetEntityForLoadoutSlot.Disable(Hook_Post, GetEntDetour_Post);
-
-	#if defined DEBUG
-		if (hReturn.Value) PrintToServer("CanPickup passed!");
-		else PrintToServer("CanPickup did not pass...");
-
-		PrintToServer("CanPickPost: Switch back to current class (%i)", GetSavedClass(iPlayer, "CurrentClass"));
-	#endif
-
-	TF2_SetPlayerClass(iPlayer, GetSavedClass(iPlayer, "CurrentClass"), _, false);
-
-	return MRES_Handled;
-}
-
-MRESReturn PickupWeaponDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams)
-{
-	hGetEntityForLoadoutSlot.Enable(Hook_Pre, GetEntDetour_Pre);
-	hGetEntityForLoadoutSlot.Enable(Hook_Post, GetEntDetour_Post);
-
-	#if defined DEBUG
-		PrintToServer("PickupWeaponPre: Switch to desired class (%i)", GetSavedClass(iPlayer, "DesiredClass"));
-	#endif
-
-	TF2_SetPlayerClass(iPlayer, GetSavedClass(iPlayer, "DesiredClass"), _, false);
-	return MRES_Handled;
-}
-MRESReturn PickupWeaponDetour_Post (int iPlayer, DHookReturn hReturn, DHookParam hParams)
-{
-	hGetEntityForLoadoutSlot.Disable(Hook_Pre, GetEntDetour_Pre);
-	hGetEntityForLoadoutSlot.Disable(Hook_Post, GetEntDetour_Post);
-
-	#if defined DEBUG
-		if (hReturn.Value) PrintToServer("PickupWeapon passed!");
-		else PrintToServer("PickupWeapon did not pass...");
-
-		PrintToServer("PickupWeaponPost: Switch back to current class (%i)", GetSavedClass(iPlayer, "CurrentClass"));
-	#endif
-
-	TF2_SetPlayerClass(iPlayer, GetSavedClass(iPlayer, "CurrentClass"), _, false);
-
-	//we're done! delete the user's key
-	char userIdStr[32];
-	IntToString(GetClientUserId(iPlayer), userIdStr, sizeof userIdStr);
-	savedData.JumpToKey("Classes");
-	savedData.DeleteKey(userIdStr);
-	savedData.Rewind();
-
-	//for sigsegv
-	Address weaponMemAddress = hParams.GetAddress(1);
-	int iDroppedWeaponEnt = GetEntityFromAddress(weaponMemAddress);
-
-	int iEquippedWeaponEnt, equippedWeaponSlot;
-
-	GetClassOfDroppedWeapon(iDroppedWeaponEnt, equippedWeaponSlot, TF2_GetPlayerClass(iPlayer));
-
-	iEquippedWeaponEnt = GetPlayerWeaponSlot(iPlayer, equippedWeaponSlot);
-
-	#if defined DEBUG
-		PrintToServer("Weapon is in slot %i!", equippedWeaponSlot);
-		char classname[64];
-		GetEntityClassname(iEquippedWeaponEnt, classname, sizeof classname);
-		if (hReturn.Value) PrintToServer("Re-equipping %i : %s!", iEquippedWeaponEnt, classname);
-	#endif
-
-	//can't just equip iWeaponEnt bc that's the tf_dropped_weapon
-
-	//for some fucking reason, using EquipPlayerWeapon fucks with sigsegv
-	//but its what allows vm wearables
-	if (hReturn.Value && IsValidEntity(iEquippedWeaponEnt)) SDKCall(hSDKCallUpdateHands, iEquippedWeaponEnt);
-	// if (hReturn.Value) EquipPlayerWeapon(iPlayer, iEquippedWeaponEnt);
-
-	return MRES_Handled;
-}
-
-MRESReturn GetEntDetour_Pre(int iPlayer, DHookReturn hReturn, DHookParam hParams)
-{
-	#if defined DEBUG
-		PrintToServer("GetEntPre: Switch to current weapon class (%i)", GetSavedClass(iPlayer, "CurrentWeaponClass"));
-	#endif
-
-	TF2_SetPlayerClass(iPlayer, GetSavedClass(iPlayer, "CurrentWeaponClass"), _, false);
-
-	if (hParams.Get(1) > -1 && hParams.Get(1) < 3)
-	{
-		//if you have a vm_wearable, it seems getent will pick that up before the actual weapon
-		//we dont need the wearable. we need the actual entity.
-
-		//TODO: FIX ME!!! hParams.Get(1) is the LOADOUT slot, we need to convert that to whatever the corresponding WEAPON slot is
-		hReturn.Value = GetPlayerWeaponSlot(iPlayer, hParams.Get(1));
-		return MRES_Override;
-	}
-
-	return MRES_Handled;
-}
-MRESReturn GetEntDetour_Post(int iPlayer, DHookReturn hReturn, DHookParam hParams)
-{
-	#if defined DEBUG
-		if (hReturn.Value != -1)
-		{
-			char clsname[65];
-			GetEntityClassname(hReturn.Value, clsname, sizeof clsname);
-			PrintToServer("Found item for needed slot %i : %s!", hParams.Get(1), clsname);
-			//for rafradek/sigsegv-mvm
-			if (StrEqual("tf_wearable_vm", clsname))
-			{
-				char model[PLATFORM_MAX_PATH];
-				GetEntPropString(hReturn.Value, Prop_Data, "m_ModelName", model, sizeof model);
-				PrintToServer("VM Wearable Model: %s", model);
-			}
-			for (int i = 0; i < 32; i++)
-			{
-				int ent;
-				ent = GetPlayerWeaponSlot(iPlayer, i);
-				if (ent == -1) continue;
-				GetEntityClassname(ent, clsname, sizeof clsname);
-				PrintToServer("Item in weapon slot %i : %s", i , clsname);
-
-			}
-		}
-		else PrintToServer("Found nothing for needed slot %i...", hParams.Get(1));
-
-		PrintToServer("GetEntPost: Switch back to desired class (%i)", GetSavedClass(iPlayer, "DesiredClass"));
-	#endif
-
-	TF2_SetPlayerClass(iPlayer, GetSavedClass(iPlayer, "DesiredClass"), _, false);
-
-	#if defined __freeguns_model_included
-		//viewmodel changes back after 1 second, fix that
-		// CreateTimer(1.0, PostPickupFixViewmodel, EntIndexToEntRef(iPlayer));
-	#endif
-
-	return MRES_Handled;
 }
 
 #if defined __freeguns_model_included
