@@ -38,7 +38,7 @@
  */
 
 /* Basic information exposed publicly */
-#define SMEXT_CONF_NAME			"Freeguns Extension"
+#define SMEXT_CONF_NAME			"Freeguns"
 #define SMEXT_CONF_DESCRIPTION	"Extension for detouring functionality of Freeguns"
 #define SMEXT_CONF_VERSION		"1.0.0.0"
 #define SMEXT_CONF_AUTHOR		"stinky_lizard"

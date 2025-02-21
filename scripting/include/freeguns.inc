@@ -4,14 +4,14 @@
  * @param in1    Test input.
  * @return      Test return.
  */
-native int testFunc(in1);
+native int testFunc(int in1);
 
 /**
  * Load extension
  */
 public Extension __ext_freeguns = 
 {
-	name = "Freeguns Extension",
+	name = "Freeguns",
 	file = "freeguns.ext.2.tf2",
 #if defined AUTOLOAD_EXTENSIONS
 	autoload = 1,

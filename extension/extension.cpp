@@ -60,7 +60,7 @@ const sp_nativeinfo_t MyNatives[] =
 
 void Freeguns::SDK_OnAllLoaded()
 {
-	sharesys->AddNatives(myself, MyNatives);
+    sharesys->AddNatives(myself, MyNatives);
 }
 
 /*
@@ -73,6 +73,7 @@ cell_t MyTestFunc(IPluginContext *pContext, const cell_t *params)
 //params is an array, where index 0 contains the size and the parameters start from index 1
 //i.e. in testFunc(in1), params = [1, in1], and calling testFunc(25) makes params [1, 25]
 
-    cout << "Hello, world! I got this to write: " + to_string(params[1]);
+    g_pSM->LogMessage(myself, "Hello, world! I got this to write: %i", params[1]);
+    
     return params[1];
 }

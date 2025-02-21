@@ -33,13 +33,17 @@
 			"CBaseEntity::GetBaseEntity"
 			{
 				"windows"	"5"
+				"windows64"	"5"
 				"linux"		"6"
+				"linux64"	"6"
 				"mac"		"6"
 			}
 			"CTFWeaponBase::UpdateHands"
 			{
 				"windows"	"387"
+				"windows64"	"387"
 				"linux"		"394"
+				"linux64"	"394"
 				"mac"		"394"
 			}
 		}
