@@ -30,10 +30,10 @@ void DroppedWeaponNextFrame(int entityref)
 
 	char messagetext[256], topspacer[32], bottomspacer[32], clientname[MAX_NAME_LENGTH], qualityname[16], itemname[64];
 
-	TF2Econ_GetQualityName(GetEntProp(entityref, Prop_Send, "m_iEntityQuality"), qualityname, sizeof qualityname);
+	// TF2Econ_GetQualityName(GetEntProp(entityref, Prop_Send, "m_iEntityQuality"), qualityname, sizeof qualityname);
 	qualityname[0] = CharToUpper(qualityname[0]);
 
-	TF2Econ_GetItemName(GetEntProp(entityref, Prop_Send, "m_iItemDefinitionIndex"), itemname, sizeof itemname);
+	// TF2Econ_GetItemName(GetEntProp(entityref, Prop_Send, "m_iItemDefinitionIndex"), itemname, sizeof itemname);
 
 	if (StrContains(itemname, "TF_") == 0)
 		//it doesn't have a name in items_game

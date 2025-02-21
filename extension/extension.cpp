@@ -30,6 +30,9 @@
  */
 
 #include "extension.h"
+#include <string>
+#include <iostream>
+using namespace std;
 
 /**
  * @file extension.cpp
@@ -39,3 +42,37 @@
 Freeguns g_Freeguns;		/**< Global singleton for extension's main interface */
 
 SMEXT_LINK(&g_Freeguns);
+
+/*
+    Declarations
+*/
+cell_t MyTestFunc(IPluginContext *pContext, const cell_t *params);
+
+/*
+    Bind Natives
+*/
+
+const sp_nativeinfo_t MyNatives[] = 
+{
+	{"testFunc",	MyTestFunc},
+	{NULL,			NULL},
+};
+
+void Freeguns::SDK_OnAllLoaded()
+{
+	sharesys->AddNatives(myself, MyNatives);
+}
+
+/*
+    Natives
+*/
+
+cell_t MyTestFunc(IPluginContext *pContext, const cell_t *params)
+{
+//pContext contains functions for "retrieving or modifying memory in the plugin"
+//params is an array, where index 0 contains the size and the parameters start from index 1
+//i.e. in testFunc(in1), params = [1, in1], and calling testFunc(25) makes params [1, 25]
+
+    cout << "Hello, world! I got this to write: " + to_string(params[1]);
+    return params[1];
+}

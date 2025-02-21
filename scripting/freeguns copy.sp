@@ -5,8 +5,7 @@
 
 #include <sdkhooks>
 
-//no longer works in x64?
-//#include <tf_econ_data>
+#include <tf_econ_data>
 
 #define PLUGIN_VERSION "2.0"
 
@@ -40,7 +39,6 @@ ConVar enabledVar;
 // #include <freeguns_glow>
 #include <freeguns_hud>
 // #include <freeguns_model>
-#include <freeguns>
 // #define DEBUG
 
 public void OnEntityCreated(int entity, const char[] classname)
@@ -58,14 +56,10 @@ public void OnPluginStart()
 {
 
 	CreateConVar("sm_freeguns_version", PLUGIN_VERSION, "Standard plugin version ConVar. Please don't change me!", FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
-	enabledVar = CreateConVar("sm_freeguns_enabled", "0", "Enable/disable Freeguns. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
+	enabledVar = CreateConVar("sm_freeguns_enabled", "1", "Enable/disable Freeguns. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
 
 	RegConsoleCmd("sm_actionbutton", OnActionButtonCmd, "Print how to find your action button binding.");
-	RegConsoleCmd("sm_test", OnTest, "Print how to find your action button binding.");
 
-
-	
-	
 	#if defined __freeguns_glow_included
 		glowVar = CreateConVar("sm_freeguns_glow", "1", "Enable/disable custom weapon glow. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
 		glowLookVar = CreateConVar("sm_freeguns_glow_lookonly", "1", "Only glow when looking directly at a weapon.", FCVAR_REPLICATED);
@@ -113,12 +107,6 @@ public void OnPluginStart()
 	if (!savedData) SetFailState("Failed to set up SavedData (Error code 40)");
 
 	enabledVar.AddChangeHook(EnabledVarChanged);
-}
-
-Action OnTest(int client, int args)
-{
-	testFunc(23);
-	return Plugin_Handled;
 }
 
 public void OnClientDisconnect(int client)
@@ -242,7 +230,7 @@ int GetWeaponSlotFromLoadoutSlot(int loadoutSlot)
 	//Since we're only dealing with weapons you can pick up, we only really need to deal with the three main weapon slots.
 
 	char weaponSlotName[64];
-	//TF2Econ_TranslateLoadoutSlotIndexToName(loadoutSlot, weaponSlotName, sizeof weaponSlotName);
+	TF2Econ_TranslateLoadoutSlotIndexToName(loadoutSlot, weaponSlotName, sizeof weaponSlotName);
 	if (StrEqual(weaponSlotName, "primary")) weaponSlot = TFWeaponSlot_Primary;
 	if (StrEqual(weaponSlotName, "secondary")) weaponSlot = TFWeaponSlot_Secondary;
 	if (StrEqual(weaponSlotName, "melee")) weaponSlot = TFWeaponSlot_Melee;
@@ -264,31 +252,31 @@ TFClassType GetClassOfDroppedWeapon(int weapon, int& loadoutSlot, TFClassType cu
 	//get the item's definition index
 	int iWeaponDef = GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex");
 
-	// if (currentClass != TFClass_Unknown)
-	// {
-	// 	int tempSlot = TF2Econ_GetItemLoadoutSlot(iWeaponDef, currentClass);
-	// 	if (tempSlot != -1)
-	// 	{
-	// 		//the weapon works with their current class
-	// 		loadoutSlot = tempSlot;
-	// 		return currentClass;
-	// 	}
-	//}
+	if (currentClass != TFClass_Unknown)
+	{
+		int tempSlot = TF2Econ_GetItemLoadoutSlot(iWeaponDef, currentClass);
+		if (tempSlot != -1)
+		{
+			//the weapon works with their current class
+			loadoutSlot = tempSlot;
+			return currentClass;
+		}
+	}
 
 	//check each class for if this weapon supports it
 	//Civilian/Unknown left out bc i dont know if that actually works ingame
 	TFClassType classes[] = {TFClass_Scout, TFClass_Sniper, TFClass_Soldier, TFClass_DemoMan, TFClass_Medic, TFClass_Heavy, TFClass_Pyro, TFClass_Spy, TFClass_Engineer};
-	// for (int i = 0; i < sizeof classes; i++)
-	// {
-	// 	int tempSlot = TF2Econ_GetItemLoadoutSlot(iWeaponDef, classes[i]);
-	// 	if (tempSlot != -1)
-	// 	{
-	// 		//there's a slot defined for this class, so it's meant to be for this class
-	// 		out = classes[i];
-	// 		loadoutSlot = tempSlot;
-	// 		break;
-	// 	}
-	// }
+	for (int i = 0; i < sizeof classes; i++)
+	{
+		int tempSlot = TF2Econ_GetItemLoadoutSlot(iWeaponDef, classes[i]);
+		if (tempSlot != -1)
+		{
+			//there's a slot defined for this class, so it's meant to be for this class
+			out = classes[i];
+			loadoutSlot = tempSlot;
+			break;
+		}
+	}
 	return out;
 }
 
@@ -314,7 +302,7 @@ bool DroppedWeaponIsDisabled(int droppedWeaponEnt)
 
 	int weaponItemDefinitionIndex = GetEntProp(droppedWeaponEnt, Prop_Send, "m_iItemDefinitionIndex");
 	char weaponItemDefClassname[64];
-	//TF2Econ_GetItemClassName(weaponItemDefinitionIndex, weaponItemDefClassname, sizeof weaponItemDefClassname);
+	TF2Econ_GetItemClassName(weaponItemDefinitionIndex, weaponItemDefClassname, sizeof weaponItemDefClassname);
 	if
 	(
 		StrEqual(weaponItemDefClassname, "tf_weapon_revolver")

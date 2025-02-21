@@ -6,3 +6,4 @@ Readme.txt
 otherplugin.sp
 extension/build
 extension/hl2sdk-manifests
+copy_over_build.sh
