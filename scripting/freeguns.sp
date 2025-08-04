@@ -37,18 +37,13 @@ KeyValues savedData;
 
 ConVar enabledVar;
 
-// #include <freeguns_glow>
 #include <freeguns_hud>
-// #include <freeguns_model>
 #include <freeguns>
 // #define DEBUG
 
 public void OnEntityCreated(int entity, const char[] classname)
 {
 
-	#if defined __freeguns_glow_included
-		GlowOnEntityCreated(entity, classname);
-	#endif
 	#if defined __freeguns_hud_included
 		HudOnEntityCreated(entity, classname);
 	#endif
@@ -61,36 +56,11 @@ public void OnPluginStart()
 	enabledVar = CreateConVar("sm_freeguns_enabled", "0", "Enable/disable Freeguns. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
 
 	RegConsoleCmd("sm_actionbutton", OnActionButtonCmd, "Print how to find your action button binding.");
-	RegConsoleCmd("sm_test", OnTest, "Print how to find your action button binding.");
-
-
 	
-	
-	#if defined __freeguns_glow_included
-		glowVar = CreateConVar("sm_freeguns_glow", "1", "Enable/disable custom weapon glow. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
-		glowLookVar = CreateConVar("sm_freeguns_glow_lookonly", "1", "Only glow when looking directly at a weapon.", FCVAR_REPLICATED);
-		glowTimerVar = CreateConVar("sm_freeguns_glow_timer", "0.3", "How often (in seconds) to update weapon glows. Make smaller to make it look nicer, or make larger to help with performance.", FCVAR_REPLICATED, true, 0.1);
-		glowRadVar = CreateConVar("sm_freeguns_glow_radius", "500", "How far (in units) dropped weapons should glow for players. Increase this to convey more info to the player, or reduce to potentially reduce visual noise/clutter.", FCVAR_REPLICATED);
-		allGlowEntities = new ArrayList(sizeof GlowEntity);
-	#endif
-
 	#if defined __freeguns_hud_included
 		hudVar = CreateConVar("sm_freeguns_hud", "1", "Enable/disable custom weapon HUD element. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
 		LoadTranslations("freeguns.phrases");
 	#endif
-
-	#if defined __freeguns_model_included
-		modelVar = CreateConVar("sm_freeguns_model", "1", "Enable/disable model switching when changing weapons. Change to 1 to enable, or 0 to disable.", FCVAR_REPLICATED|FCVAR_NOTIFY);
-		for (int i = 1; i < MaxClients; i++)
-		{
-			if (!IsClientInGame(i)) continue;
-			SDKHook(i, SDKHook_WeaponSwitch, OnClientWeaponSwitch);
-			SDKHook(i, SDKHook_WeaponSwitchPost, OnClientWeaponSwitchPost);
-			SetWearable(i);
-		}
-	#endif
-
-	HookEvent("post_inventory_application", OnInventoryApplied);
 
 	GameData hGameConf = new GameData("tf2.freeguns");
 
@@ -113,43 +83,6 @@ public void OnPluginStart()
 	if (!savedData) SetFailState("Failed to set up SavedData (Error code 40)");
 
 	enabledVar.AddChangeHook(EnabledVarChanged);
-}
-
-Action OnTest(int client, int args)
-{
-	testFunc(23);
-	return Plugin_Handled;
-}
-
-public void OnClientDisconnect(int client)
-{
-	#if defined __freeguns_model_included
-		ModelOnClientDisconnect(client);
-	#endif
-	#if defined __freeguns_glow_included
-		GlowOnClientDisconnect(client);
-	#endif
-}
-
-
-void OnInventoryApplied(Event event, const char[] name, bool dontBroadcast)
-{
-	int userId = event.GetInt("userid", -1);
-	if (userId == -1) return;
-
-	int client = GetClientOfUserId(userId);
-	if (!IsClientInGame(client) || client == 0) return;
-	CreateTimer(0.5, Timer_PostInventory, client);
-}
-
-Action Timer_PostInventory(Handle timer, int client)
-{
-	#if defined __freeguns_model_included
-	if (modelVar.BoolValue)
-		SetWearable(client);
-	#endif
-
-	return Plugin_Handled;
 }
 
 Action OnActionButtonCmd(int client, int args)
@@ -175,15 +108,6 @@ void EnabledVarChanged(ConVar convar, const char[] oldValue, const char[] newVal
 		// DisableDetours();
 	}
 }
-
-#if defined __freeguns_model_included
-	Action PostPickupFixViewmodel(Handle timer, int client)
-	{
-		int weapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-		OnClientWeaponSwitchPost(EntRefToEntIndex(client), weapon);
-		return Plugin_Handled;
-	}
-#endif
 
 int GetEntityFromAddress(Address pEntity)
 {
