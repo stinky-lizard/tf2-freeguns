@@ -38,7 +38,7 @@
  */
 
 #include "smsdk_ext.h"
-
+#include <CDetour/detours.h>
 
 /**
  * @brief Sample implementation of the SDK Extension.
@@ -120,6 +120,8 @@ public:
 cell_t InitDetours(IPluginContext *pContext, const cell_t *params);
 cell_t EnableDetours(IPluginContext *pContext, const cell_t *params);
 cell_t DisableDetours(IPluginContext *pContext, const cell_t *params);
+
+class CTFDroppedWeapon;
 
 
 #endif // _INCLUDE_SOURCEMOD_EXTENSION_PROPER_H_

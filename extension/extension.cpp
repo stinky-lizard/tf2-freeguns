@@ -32,8 +32,6 @@
 #include "extension.h"
 #include <string>
 #include <iostream>
-#include <CDetour/detours.h>
-//#include <tf_player.h>
 using namespace std;
 
 /**
@@ -51,23 +49,24 @@ SMEXT_LINK(&g_Freeguns);
 CDetour *PickupWeaponDetourMgr = NULL;
 //declare and define the new function - the "wrapper" around the original
 //keep in mind it's not bound or enabled yet! the function is just defined
-// DETOUR_DECL_MEMBER1(PickupWeaponDetourFunc, bool, CTFDroppedWeapon *, pDroppedWeapon)
-// {
-//     //pre-original stuff
+DETOUR_DECL_MEMBER1(PickupWeaponDetourFunc, bool, CTFDroppedWeapon *, pDroppedWeapon)
+{
+    //pre-original stuff
 
-//     //todo: determine needed class from weapon & change player to class
+    //todo: determine needed class from weapon & change player to class
 
-//     g_pSM->LogMessage(myself, "Hello, world! This is right before the pickup process!");
+    g_pSM->LogMessage(myself, "Hello, world! This is right before the pickup process!");
 
 
-//     //call original
-//     DETOUR_MEMBER_CALL(PickupWeaponDetourFunc)(pDroppedWeapon);
+    //call original
+    bool out = DETOUR_MEMBER_CALL(PickupWeaponDetourFunc)(pDroppedWeapon);
     
     
-//     //post-original stuff
+    //post-original stuff
 
-//     //todo: switch player back to original class
-// }
+    //todo: switch player back to original class
+    return out; 
+}
 
 /*
     Bind Natives & Hooks 
@@ -83,7 +82,8 @@ const sp_nativeinfo_t MyNatives[] =
 
 bool SDK_OnLoad(char *error, size_t maxlen, bool late)
 {
-
+    //init and enable detour here
+    return true;
 }
 
 void Freeguns::SDK_OnAllLoaded()
@@ -97,17 +97,17 @@ void Freeguns::SDK_OnAllLoaded()
 
 cell_t InitDetours(IPluginContext *pContext, const cell_t *params)
 {
-
+    return params[1];
 }
 
 cell_t EnableDetours(IPluginContext *pContext, const cell_t *params)
 {
-
+    return params[1];
 }
 
 cell_t DisableDetours(IPluginContext *pContext, const cell_t *params)
 {
-
+    return params[1];
 }
 
 
