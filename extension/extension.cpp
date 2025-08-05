@@ -32,6 +32,8 @@
 #include "extension.h"
 #include <string>
 #include <iostream>
+#include <CDetour/detours.h>
+//#include <tf_player.h>
 using namespace std;
 
 /**
@@ -46,17 +48,43 @@ SMEXT_LINK(&g_Freeguns);
 /*
     Declarations
 */
-cell_t MyTestFunc(IPluginContext *pContext, const cell_t *params);
+CDetour *PickupWeaponDetourMgr = NULL;
+//declare and define the new function - the "wrapper" around the original
+//keep in mind it's not bound or enabled yet! the function is just defined
+// DETOUR_DECL_MEMBER1(PickupWeaponDetourFunc, bool, CTFDroppedWeapon *, pDroppedWeapon)
+// {
+//     //pre-original stuff
+
+//     //todo: determine needed class from weapon & change player to class
+
+//     g_pSM->LogMessage(myself, "Hello, world! This is right before the pickup process!");
+
+
+//     //call original
+//     DETOUR_MEMBER_CALL(PickupWeaponDetourFunc)(pDroppedWeapon);
+    
+    
+//     //post-original stuff
+
+//     //todo: switch player back to original class
+// }
 
 /*
-    Bind Natives
+    Bind Natives & Hooks 
 */
 
 const sp_nativeinfo_t MyNatives[] = 
 {
-	{"testFunc",	MyTestFunc},
+    {"initDetours", InitDetours},
+    {"enableDetours", EnableDetours},
+    {"disableDetours", DisableDetours},
 	{NULL,			NULL},
 };
+
+bool SDK_OnLoad(char *error, size_t maxlen, bool late)
+{
+
+}
 
 void Freeguns::SDK_OnAllLoaded()
 {
@@ -64,14 +92,30 @@ void Freeguns::SDK_OnAllLoaded()
 }
 
 /*
-    Natives
+    Native Definitions
 */
 
-cell_t MyTestFunc(IPluginContext *pContext, const cell_t *params)
+cell_t InitDetours(IPluginContext *pContext, const cell_t *params)
+{
+
+}
+
+cell_t EnableDetours(IPluginContext *pContext, const cell_t *params)
+{
+
+}
+
+cell_t DisableDetours(IPluginContext *pContext, const cell_t *params)
+{
+
+}
+
+
+cell_t ReferenceFunc(IPluginContext *pContext, const cell_t *params)
 {
 //pContext contains functions for "retrieving or modifying memory in the plugin"
 //params is an array, where index 0 contains the size and the parameters start from index 1
-//i.e. in testFunc(in1), params = [1, in1], and calling testFunc(25) makes params [1, 25]
+//i.e. in ReferenceFunc(in1), params = [1, in1], and calling ReferenceFunc(25) makes params [1, 25]
 
     g_pSM->LogMessage(myself, "Hello, world! I got this to write: %i", params[1]);
     

@@ -55,12 +55,12 @@ public:
 	 * @param late		Whether or not the module was loaded after map load.
 	 * @return			True to succeed loading, false to fail.
 	 */
-	//virtual bool SDK_OnLoad(char *error, size_t maxlen, bool late);
+	virtual bool SDK_OnLoad(char *error, size_t maxlen, bool late);
 	
 	/**
 	 * @brief This is called right before the extension is unloaded.
 	 */
-	//virtual void SDK_OnUnload();
+	virtual void SDK_OnUnload();
 
 	/**
 	 * @brief This is called once all known extensions have been loaded.
@@ -114,6 +114,12 @@ public:
 	 */
 	//virtual bool SDK_OnMetamodPauseChange(bool paused, char *error, size_t maxlen);
 #endif
+
 };
+
+cell_t InitDetours(IPluginContext *pContext, const cell_t *params);
+cell_t EnableDetours(IPluginContext *pContext, const cell_t *params);
+cell_t DisableDetours(IPluginContext *pContext, const cell_t *params);
+
 
 #endif // _INCLUDE_SOURCEMOD_EXTENSION_PROPER_H_
