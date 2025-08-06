@@ -46,6 +46,14 @@ SMEXT_LINK(&g_Freeguns);
 /*
     Declarations
 */
+
+cell_t InitDetours(IPluginContext *pContext, const cell_t *params);
+cell_t EnableDetours(IPluginContext *pContext, const cell_t *params);
+cell_t DisableDetours(IPluginContext *pContext, const cell_t *params);
+
+class CTFDroppedWeapon;
+
+
 CDetour *PickupWeaponDetourMgr = NULL;
 //declare and define the new function - the "wrapper" around the original
 //keep in mind it's not bound or enabled yet! the function is just defined
@@ -80,7 +88,7 @@ const sp_nativeinfo_t MyNatives[] =
 	{NULL,			NULL},
 };
 
-bool SDK_OnLoad(char *error, size_t maxlen, bool late)
+bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 {
     //init and enable detour here
     return true;
@@ -88,6 +96,7 @@ bool SDK_OnLoad(char *error, size_t maxlen, bool late)
 
 void Freeguns::SDK_OnAllLoaded()
 {
+    g_pSM->LogMessage(myself, "Hello, world!");
     sharesys->AddNatives(myself, MyNatives);
 }
 
@@ -111,13 +120,13 @@ cell_t DisableDetours(IPluginContext *pContext, const cell_t *params)
 }
 
 
-cell_t ReferenceFunc(IPluginContext *pContext, const cell_t *params)
-{
-//pContext contains functions for "retrieving or modifying memory in the plugin"
-//params is an array, where index 0 contains the size and the parameters start from index 1
-//i.e. in ReferenceFunc(in1), params = [1, in1], and calling ReferenceFunc(25) makes params [1, 25]
+// cell_t ReferenceFunc(IPluginContext *pContext, const cell_t *params)
+// {
+// //pContext contains functions for "retrieving or modifying memory in the plugin"
+// //params is an array, where index 0 contains the size and the parameters start from index 1
+// //i.e. in ReferenceFunc(in1), params = [1, in1], and calling ReferenceFunc(25) makes params [1, 25]
 
-    g_pSM->LogMessage(myself, "Hello, world! I got this to write: %i", params[1]);
+//     g_pSM->LogMessage(myself, "Hello, world! I got this to write: %i", params[1]);
     
-    return params[1];
-}
+//     return params[1];
+// }

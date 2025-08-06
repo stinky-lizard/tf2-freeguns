@@ -60,7 +60,7 @@ public:
 	/**
 	 * @brief This is called right before the extension is unloaded.
 	 */
-	virtual void SDK_OnUnload();
+	//virtual void SDK_OnUnload();
 
 	/**
 	 * @brief This is called once all known extensions have been loaded.
@@ -116,12 +116,5 @@ public:
 #endif
 
 };
-
-cell_t InitDetours(IPluginContext *pContext, const cell_t *params);
-cell_t EnableDetours(IPluginContext *pContext, const cell_t *params);
-cell_t DisableDetours(IPluginContext *pContext, const cell_t *params);
-
-class CTFDroppedWeapon;
-
 
 #endif // _INCLUDE_SOURCEMOD_EXTENSION_PROPER_H_
