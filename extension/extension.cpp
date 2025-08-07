@@ -47,14 +47,13 @@ SMEXT_LINK(&g_Freeguns);
     Declarations
 */
 
-cell_t InitDetours(IPluginContext *pContext, const cell_t *params);
 cell_t EnableDetours(IPluginContext *pContext, const cell_t *params);
 cell_t DisableDetours(IPluginContext *pContext, const cell_t *params);
 
 class CTFDroppedWeapon;
 
 
-CDetour *PickupWeaponDetourMgr = NULL;
+CDetour *PickupWeaponDetour = NULL;
 //declare and define the new function - the "wrapper" around the original
 //keep in mind it's not bound or enabled yet! the function is just defined
 DETOUR_DECL_MEMBER1(PickupWeaponDetourFunc, bool, CTFDroppedWeapon *, pDroppedWeapon)
@@ -82,7 +81,6 @@ DETOUR_DECL_MEMBER1(PickupWeaponDetourFunc, bool, CTFDroppedWeapon *, pDroppedWe
 
 const sp_nativeinfo_t MyNatives[] = 
 {
-    {"initDetours", InitDetours},
     {"enableDetours", EnableDetours},
     {"disableDetours", DisableDetours},
 	{NULL,			NULL},
@@ -91,7 +89,22 @@ const sp_nativeinfo_t MyNatives[] =
 bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 {
     //init and enable detour here
+    PickupWeaponDetour = DETOUR_CREATE_MEMBER(PickupWeaponDetourFunc, "PickupWeaponFromOthers");
+    if (PickupWeaponDetour == NULL)
+	{
+        g_pSM->LogError(myself, "PickupWeaponFromOthers detour could not be initialized (Error code 11)");
+        return false;
+	}
+    
+    PickupWeaponDetour->EnableDetour();
+
     return true;
+}
+
+void Freeguns::SDK_OnUnload()
+{
+    if (PickupWeaponDetour != NULL)
+        PickupWeaponDetour->DisableDetour();
 }
 
 void Freeguns::SDK_OnAllLoaded()
@@ -103,11 +116,6 @@ void Freeguns::SDK_OnAllLoaded()
 /*
     Native Definitions
 */
-
-cell_t InitDetours(IPluginContext *pContext, const cell_t *params)
-{
-    return params[1];
-}
 
 cell_t EnableDetours(IPluginContext *pContext, const cell_t *params)
 {
