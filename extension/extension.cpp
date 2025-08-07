@@ -52,9 +52,10 @@ cell_t EnableDetours(IPluginContext *pContext, const cell_t *params);
 cell_t DisableDetours(IPluginContext *pContext, const cell_t *params);
 
 class CTFDroppedWeapon;
+IGameConfig *g_pGameConf = NULL;
 
-
-CDetour *PickupWeaponDetour = NULL;
+CDetour *PickupWeaponDetour;
+CDetour *CanPickupDetour;
 //declare and define the new function - the "wrapper" around the original
 //keep in mind it's not bound or enabled yet! the function is just defined
 DETOUR_DECL_MEMBER1(PickupWeaponDetourFunc, bool, CTFDroppedWeapon *, pDroppedWeapon)
@@ -62,22 +63,39 @@ DETOUR_DECL_MEMBER1(PickupWeaponDetourFunc, bool, CTFDroppedWeapon *, pDroppedWe
     //pre-original stuff
 
     //todo: determine needed class from weapon & change player to class
-
+    
     g_pSM->LogMessage(myself, "Hello, world! This is right before the pickup process!");
-
-
+    
+    
     //call original
     bool out = DETOUR_MEMBER_CALL(PickupWeaponDetourFunc)(pDroppedWeapon);
     
+    //post-original stuff
+    
+    //todo: switch player back to original class
+    return out; 
+}
+
+DETOUR_DECL_MEMBER1(CanPickupDetourFunc, bool, CTFDroppedWeapon *, pDroppedWeapon)
+{
+    //pre-original stuff
+
+    //todo: determine needed class from weapon & change player to class
+    
+    g_pSM->LogMessage(myself, "Hello, world! This is right before CanPickup!");
+    
+    
+    //call original
+    bool out = DETOUR_MEMBER_CALL(CanPickupDetourFunc)(pDroppedWeapon);
     
     //post-original stuff
-
+    
     //todo: switch player back to original class
     return out; 
 }
 
 /*
-    Bind Natives & Hooks 
+Bind Natives & Hooks 
 */
 
 const sp_nativeinfo_t MyNatives[] = 
@@ -87,17 +105,37 @@ const sp_nativeinfo_t MyNatives[] =
 	{NULL,			NULL},
 };
 
+//man i dont like doing this but the macro weirdness would mess with passing the function and i want to make it easier to read in sdk_onload
+#define INIT_DETOUR(detourObj, detourFunc, gamedataKey)                                             \
+detourObj = DETOUR_CREATE_MEMBER(detourFunc, gamedataKey);                                          \
+if (detourObj == NULL)                                                                              \
+{                                                                                                   \
+    g_pSM->LogError(myself, "%s detour could not be initialized (Error code 11)", gamedataKey);     \
+    return false;                                                                                   \
+}                                                                                                   \
+detourObj->EnableDetour();                                                                          
+
+
+
 bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 {
-    //init and enable detour here
-    PickupWeaponDetour = DETOUR_CREATE_MEMBER(PickupWeaponDetourFunc, "PickupWeaponFromOther");
-    if (PickupWeaponDetour == NULL)
+    //load game conf
+
+    char conf_error[255] = "";
+	if (!gameconfs->LoadGameConfigFile("tf2.freeguns", &g_pGameConf, conf_error, sizeof(conf_error)))
 	{
-        g_pSM->LogError(myself, "PickupWeaponFromOther detour could not be initialized (Error code 11)");
-        return false;
+		if (conf_error[0])
+		{
+			snprintf(error, maxlen, "Could not read tf2.freeguns.txt: %s\n", conf_error);
+		}
+		return false;
 	}
-    
-    PickupWeaponDetour->EnableDetour();
+
+
+    //init and enable detours here
+    CDetourManager::Init(g_pSM->GetScriptingEngine(), g_pGameConf);
+    INIT_DETOUR(PickupWeaponDetour, PickupWeaponDetourFunc, "CTFPlayer::PickupWeaponFromOther");
+    INIT_DETOUR(CanPickupDetour, CanPickupDetourFunc, "CTFPlayer::CanPickupDroppedWeapon");
 
     return true;
 }
