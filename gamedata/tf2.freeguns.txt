@@ -9,13 +9,15 @@
 			{
 				"library"	"server"
 				"linux64"	"@_ZN9CTFPlayer24TryToPickupDroppedWeaponEv"
+				"linux"		"@_ZN9CTFPlayer24TryToPickupDroppedWeaponEv"
+				"windows"	"\x55\x8B\xEC\x53\x8B\x5D\x08\x56\x8B\xF1\x80\xBB\x04\x05\x00\x00\x00" //wrong but lol
 			}
 			"CTFPlayer::CanPickupDroppedWeapon"
 			{
 				"library"	"server"
 				"windows"	"\x55\x8B\xEC\x53\x8B\x5D\x08\x56\x8B\xF1\x80\xBB\x04\x05\x00\x00\x00"
 				"linux"		"@_ZN9CTFPlayer22CanPickupDroppedWeaponEPK16CTFDroppedWeapon"
-				"linux64"	"@_ZN9CTFPlayer22CanPickupDroppedWeaponEPK16CTFDroppedWeapon"
+				"linux64"	"@_ZN9CTFPlayer22CanPickupDroppedWeaponEPK16CTFDroppedWeapon.part.0"
 				"mac"		"@_ZN9CTFPlayer22CanPickupDroppedWeaponEPK16CTFDroppedWeapon"
 			}
 			"CTFPlayer::PickupWeaponFromOther"
