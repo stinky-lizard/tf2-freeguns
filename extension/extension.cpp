@@ -32,6 +32,7 @@
 #include "extension.h"
 #include <string>
 #include <iostream>
+#include <CDetour/detours.h>
 using namespace std;
 
 /**
@@ -92,7 +93,7 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     PickupWeaponDetour = DETOUR_CREATE_MEMBER(PickupWeaponDetourFunc, "PickupWeaponFromOther");
     if (PickupWeaponDetour == NULL)
 	{
-        g_pSM->LogError(myself, "PickupWeaponFromOthers detour could not be initialized (Error code 11)");
+        g_pSM->LogError(myself, "PickupWeaponFromOther detour could not be initialized (Error code 11)");
         return false;
 	}
     

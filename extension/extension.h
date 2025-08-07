@@ -38,7 +38,6 @@
  */
 
 #include "smsdk_ext.h"
-#include <CDetour/detours.h>
 
 /**
  * @brief Sample implementation of the SDK Extension.
