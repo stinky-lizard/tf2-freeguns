@@ -55,7 +55,7 @@ class CTFDroppedWeapon;
 IGameConfig *g_pGameConf = NULL;
 
 CDetour *PickupWeaponDetour;
-CDetour *CanPickupDetour;
+CDetour *TryToPickupDetour;
 //declare and define the new function - the "wrapper" around the original
 //keep in mind it's not bound or enabled yet! the function is just defined
 DETOUR_DECL_MEMBER1(PickupWeaponDetourFunc, bool, CTFDroppedWeapon *, pDroppedWeapon)
@@ -64,30 +64,32 @@ DETOUR_DECL_MEMBER1(PickupWeaponDetourFunc, bool, CTFDroppedWeapon *, pDroppedWe
 
     //todo: determine needed class from weapon & change player to class
     
-    g_pSM->LogMessage(myself, "Hello, world! This is right before the pickup process!");
+    g_pSM->LogMessage(myself, "This is right before PickupWeapon!");
     
     
     //call original
     bool out = DETOUR_MEMBER_CALL(PickupWeaponDetourFunc)(pDroppedWeapon);
     
+    g_pSM->LogMessage(myself, "This is right after PickupWeapon!");
     //post-original stuff
     
     //todo: switch player back to original class
     return out; 
 }
 
-DETOUR_DECL_MEMBER1(CanPickupDetourFunc, bool, CTFDroppedWeapon *, pDroppedWeapon)
+DETOUR_DECL_MEMBER0(TryToPickupDetourFunc, bool)
 {
     //pre-original stuff
 
     //todo: determine needed class from weapon & change player to class
     
-    g_pSM->LogMessage(myself, "Hello, world! This is right before CanPickup!");
+    g_pSM->LogMessage(myself, "Hello, world! This is right before TryToPickup!");
     
     
     //call original
-    bool out = DETOUR_MEMBER_CALL(CanPickupDetourFunc)(pDroppedWeapon);
+    bool out = DETOUR_MEMBER_CALL(TryToPickupDetourFunc)();
     
+    g_pSM->LogMessage(myself, "This is right after TryToPickup!");
     //post-original stuff
     
     //todo: switch player back to original class
@@ -135,7 +137,7 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     //init and enable detours here
     CDetourManager::Init(g_pSM->GetScriptingEngine(), g_pGameConf);
     INIT_DETOUR(PickupWeaponDetour, PickupWeaponDetourFunc, "CTFPlayer::PickupWeaponFromOther");
-    INIT_DETOUR(CanPickupDetour, CanPickupDetourFunc, "CTFPlayer::CanPickupDroppedWeapon");
+    INIT_DETOUR(TryToPickupDetour, TryToPickupDetourFunc, "CTFPlayer::TryToPickupDroppedWeapon");
 
     return true;
 }
@@ -144,6 +146,8 @@ void Freeguns::SDK_OnUnload()
 {
     if (PickupWeaponDetour != NULL)
         PickupWeaponDetour->Destroy();
+    if (TryToPickupDetour != NULL)
+        TryToPickupDetour->Destroy();
 }
 
 void Freeguns::SDK_OnAllLoaded()

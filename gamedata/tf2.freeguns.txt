@@ -5,6 +5,11 @@
 	{
 		"Signatures"
 		{
+			"CTFPlayer::TryToPickupDroppedWeapon"
+			{
+				"library"	"server"
+				"linux64"	"@_ZN9CTFPlayer24TryToPickupDroppedWeaponEv"
+			}
 			"CTFPlayer::CanPickupDroppedWeapon"
 			{
 				"library"	"server"
