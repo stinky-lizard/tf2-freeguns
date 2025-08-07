@@ -89,7 +89,7 @@ const sp_nativeinfo_t MyNatives[] =
 bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 {
     //init and enable detour here
-    PickupWeaponDetour = DETOUR_CREATE_MEMBER(PickupWeaponDetourFunc, "PickupWeaponFromOthers");
+    PickupWeaponDetour = DETOUR_CREATE_MEMBER(PickupWeaponDetourFunc, "PickupWeaponFromOther");
     if (PickupWeaponDetour == NULL)
 	{
         g_pSM->LogError(myself, "PickupWeaponFromOthers detour could not be initialized (Error code 11)");
@@ -104,7 +104,7 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 void Freeguns::SDK_OnUnload()
 {
     if (PickupWeaponDetour != NULL)
-        PickupWeaponDetour->DisableDetour();
+        PickupWeaponDetour->Destroy();
 }
 
 void Freeguns::SDK_OnAllLoaded()
@@ -119,11 +119,13 @@ void Freeguns::SDK_OnAllLoaded()
 
 cell_t EnableDetours(IPluginContext *pContext, const cell_t *params)
 {
+    PickupWeaponDetour->EnableDetour();
     return params[1];
 }
 
 cell_t DisableDetours(IPluginContext *pContext, const cell_t *params)
 {
+    PickupWeaponDetour->DisableDetour();
     return params[1];
 }
 
