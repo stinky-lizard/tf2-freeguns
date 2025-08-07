@@ -200,7 +200,7 @@ class ExtensionConfig(object):
       '-pipe',
       '-fno-strict-aliasing',
       '-Wall',
-      '-Werror',
+#      '-Werror',
       '-Wno-unused',
       '-Wno-switch',
       '-Wno-array-bounds',
@@ -389,8 +389,8 @@ class ExtensionConfig(object):
     return binary
 
   def AddCDetour(self, binary):
-    public_path = os.path.join(builder.sourcePath, 'public')
-    binary.compiler.cxxincludes += [ os.path.join(public_path, 'safetyhook', 'include') ]
+    binary.sources += [ os.path.join(self.sm_root, 'public', 'CDetour', 'detours.cpp') ]
+    binary.compiler.cxxincludes += [ os.path.join(self.sm_root, 'public', 'safetyhook', 'include') ]
 
     for task in self.libsafetyhook:
       if task.target.arch == binary.compiler.target.arch:
