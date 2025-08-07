@@ -59,6 +59,7 @@ IGameConfig *g_pGameConf = NULL;
 
 CDetour *PickupWeaponDetour;
 CDetour *CanPickupDetour;
+CDetour *TryToPickupDetour;
 //declare and define the new function - the "wrapper" around the original
 //keep in mind it's not bound or enabled yet! the function is just defined
 DETOUR_DECL_MEMBER1(PickupWeaponDetourFunc, bool, CTFDroppedWeapon *, pDroppedWeapon)
@@ -99,6 +100,26 @@ DETOUR_DECL_MEMBER1(CanPickupDetourFunc, bool, const CTFDroppedWeapon *, pWeapon
     return out; 
 }
 
+DETOUR_DECL_MEMBER0(TryToPickupDetourFunc, bool)
+{
+    //pre-original stuff
+
+    //todo: determine needed class from weapon & change player to class
+    
+    g_pSM->LogMessage(myself, "Hello, world! This is right before TryToPickup!");
+    
+    
+    //call original
+    bool out = DETOUR_MEMBER_CALL(TryToPickupDetourFunc)();
+    
+    g_pSM->LogMessage(myself, "This is right after TryToPickup!");
+    //post-original stuff
+    
+    //todo: switch player back to original class
+    return out; 
+}
+
+
 /*
 Bind Natives & Hooks 
 */
@@ -119,7 +140,8 @@ if (detourObj == NULL)                                                          
     g_pSM->LogError(myself, "%s detour could not be initialized (Error code %i)", gamedataKey, errorCode);  \
     return false;                                                                                           \
 }                                                                                                           \
-detourObj->EnableDetour();                                                                          
+detourObj->EnableDetour();                                                                                  \
+g_pSM->LogMessage(myself, "Initialized detour for %s", gamedataKey); \
 
 
 
@@ -140,8 +162,9 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 
     //init and enable detours here
     CDetourManager::Init(g_pSM->GetScriptingEngine(), g_pGameConf);
-    INIT_DETOUR(PickupWeaponDetour, PickupWeaponDetourFunc, "CTFPlayer::PickupWeaponFromOther", 11);
+    // INIT_DETOUR(PickupWeaponDetour, PickupWeaponDetourFunc, "CTFPlayer::PickupWeaponFromOther", 11);
     INIT_DETOUR(CanPickupDetour, CanPickupDetourFunc, "CTFPlayer::CanPickupDroppedWeapon", 21);
+    INIT_DETOUR(TryToPickupDetour, TryToPickupDetourFunc, "CTFPlayer::TryToPickupDroppedWeapon", 31);
     return true;
 }
 
