@@ -48,8 +48,12 @@ SMEXT_LINK(&g_Freeguns);
     Declarations
 */
 
-cell_t EnableDetours(IPluginContext *pContext, const cell_t *params);
-cell_t DisableDetours(IPluginContext *pContext, const cell_t *params);
+// cell_t EnableDetours(IPluginContext *pContext, const cell_t *params);
+// cell_t DisableDetours(IPluginContext *pContext, const cell_t *params);
+
+bool InitCanPickupDetour();
+bool InitPickupWeaponDetour();
+
 
 //dummy class to compile. seems to work in game?
 class CTFDroppedWeapon;
@@ -57,30 +61,11 @@ class CTFDroppedWeapon;
 
 IGameConfig *g_pGameConf = NULL;
 
-CDetour *PickupWeaponDetour;
 CDetour *CanPickupDetour;
-CDetour *TryToPickupDetour;
+CDetour *PickupWeaponDetour;
+// CDetour *TryToPickupDetour;
 //declare and define the new function - the "wrapper" around the original
 //keep in mind it's not bound or enabled yet! the function is just defined
-DETOUR_DECL_MEMBER1(PickupWeaponDetourFunc, bool, CTFDroppedWeapon *, pDroppedWeapon)
-{
-    //pre-original stuff
-
-    //todo: determine needed class from weapon & change player to class
-    
-    g_pSM->LogMessage(myself, "This is right before PickupWeapon!");
-    
-    
-    //call original
-    bool out = DETOUR_MEMBER_CALL(PickupWeaponDetourFunc)(pDroppedWeapon);
-    
-    g_pSM->LogMessage(myself, "This is right after PickupWeapon!");
-    //post-original stuff
-    
-    //todo: switch player back to original class
-    return out; 
-}
-
 DETOUR_DECL_MEMBER1(CanPickupDetourFunc, bool, const CTFDroppedWeapon *, pWeapon)
 {
     //pre-original stuff
@@ -100,24 +85,43 @@ DETOUR_DECL_MEMBER1(CanPickupDetourFunc, bool, const CTFDroppedWeapon *, pWeapon
     return out; 
 }
 
-DETOUR_DECL_MEMBER0(TryToPickupDetourFunc, bool)
+DETOUR_DECL_MEMBER1(PickupWeaponDetourFunc, bool, CTFDroppedWeapon *, pDroppedWeapon)
 {
     //pre-original stuff
 
     //todo: determine needed class from weapon & change player to class
     
-    g_pSM->LogMessage(myself, "Hello, world! This is right before TryToPickup!");
+    g_pSM->LogMessage(myself, "This is right before PickupWeapon!");
     
     
     //call original
-    bool out = DETOUR_MEMBER_CALL(TryToPickupDetourFunc)();
+    bool out = DETOUR_MEMBER_CALL(PickupWeaponDetourFunc)(pDroppedWeapon);
     
-    g_pSM->LogMessage(myself, "This is right after TryToPickup!");
+    g_pSM->LogMessage(myself, "This is right after PickupWeapon!");
     //post-original stuff
     
     //todo: switch player back to original class
     return out; 
 }
+
+// DETOUR_DECL_MEMBER0(TryToPickupDetourFunc, bool)
+// {
+//     //pre-original stuff
+
+//     //todo: determine needed class from weapon & change player to class
+    
+//     g_pSM->LogMessage(myself, "Hello, world! This is right before TryToPickup!");
+    
+    
+//     //call original
+//     bool out = DETOUR_MEMBER_CALL(TryToPickupDetourFunc)();
+    
+//     g_pSM->LogMessage(myself, "This is right after TryToPickup!");
+//     //post-original stuff
+    
+//     //todo: switch player back to original class
+//     return out; 
+// }
 
 
 /*
@@ -126,24 +130,10 @@ Bind Natives & Hooks
 
 const sp_nativeinfo_t MyNatives[] = 
 {
-    {"enableDetours", EnableDetours},
-    {"disableDetours", DisableDetours},
+    // {"enableDetours", EnableDetours},
+    // {"disableDetours", DisableDetours},
 	{NULL,			NULL},
 };
-
-//man i dont like doing this but the macro weirdness would mess with passing the function and i want to make it easier to read in sdk_onload
-//Only Use In SDK_OnLoad After CDetourManager::Init
-#define INIT_DETOUR(detourObj, detourFunc, gamedataKey, errorCode)                                          \
-detourObj = DETOUR_CREATE_MEMBER(detourFunc, gamedataKey);                                                  \
-if (detourObj == NULL)                                                                                      \
-{                                                                                                           \
-    g_pSM->LogError(myself, "%s detour could not be initialized (Error code %i)", gamedataKey, errorCode);  \
-    return false;                                                                                           \
-}                                                                                                           \
-detourObj->EnableDetour();                                                                                  \
-g_pSM->LogMessage(myself, "Initialized detour for %s", gamedataKey); \
-
-
 
 bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 {
@@ -159,14 +149,64 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 		return false;
 	}
 
-
     //init and enable detours here
     CDetourManager::Init(g_pSM->GetScriptingEngine(), g_pGameConf);
-    // INIT_DETOUR(PickupWeaponDetour, PickupWeaponDetourFunc, "CTFPlayer::PickupWeaponFromOther", 11);
-    INIT_DETOUR(CanPickupDetour, CanPickupDetourFunc, "CTFPlayer::CanPickupDroppedWeapon", 21);
-    INIT_DETOUR(TryToPickupDetour, TryToPickupDetourFunc, "CTFPlayer::TryToPickupDroppedWeapon", 31);
+
+    if (!InitCanPickupDetour()) return false;
+    if (!InitPickupWeaponDetour()) return false;
+    
+    // INIT_DETOUR(TryToPickupDetour, TryToPickupDetourFunc, "CTFPlayer::TryToPickupDroppedWeapon", 31);
     return true;
 }
+
+//I could consolidate these functions into a macro to save space, but I think it's easier to read this way. Easier to work with too
+
+//Iniitialize and enable CanPickupDroppedWeapon detour. Use only once after CDetourManager::Init
+bool InitCanPickupDetour()
+{
+    const char* gamedataKey = "CTFPlayer::CanPickupDroppedWeapon";
+    
+    CanPickupDetour = DETOUR_CREATE_MEMBER(CanPickupDetourFunc, gamedataKey);
+    
+    if (CanPickupDetour == NULL)
+    {
+        g_pSM->LogError(myself, "Could not initialize %s detour (Error code 11)", gamedataKey);
+        return false;
+    }
+    
+    CanPickupDetour->EnableDetour();
+    
+    if (!(CanPickupDetour->IsEnabled()))
+        g_pSM->LogError(myself, "Could not enable %s detour (Error code 12)", gamedataKey);
+    else
+        g_pSM->LogMessage(myself, "Initialized & enabled detour for %s", gamedataKey);
+    
+    return true;
+}
+
+//Iniitialize and enable PickupWeaponFromOther detour. Use only once after CDetourManager::Init
+bool InitPickupWeaponDetour()
+{
+    const char* gamedataKey = "CTFPlayer::PickupWeaponFromOther";
+    
+    PickupWeaponDetour = DETOUR_CREATE_MEMBER(PickupWeaponDetourFunc, gamedataKey);
+    
+    if (PickupWeaponDetour == NULL)
+    {
+        g_pSM->LogError(myself, "Could not initialize %s detour (Error code 21)", gamedataKey);
+        return false;
+    }
+
+    PickupWeaponDetour->EnableDetour();
+    
+    if (!(PickupWeaponDetour->IsEnabled()))
+        g_pSM->LogError(myself, "Could not enable %s detour (Error code 22)", gamedataKey);
+    else
+        g_pSM->LogMessage(myself, "Initialized & enabled detour for %s", gamedataKey);
+
+    return true;
+}
+
 
 void Freeguns::SDK_OnUnload()
 {
@@ -178,30 +218,30 @@ void Freeguns::SDK_OnUnload()
 
 void Freeguns::SDK_OnAllLoaded()
 {
-    sharesys->AddNatives(myself, MyNatives);
+    // sharesys->AddNatives(myself, MyNatives);
 }
 
 /*
     Native Definitions
 */
 
-cell_t EnableDetours(IPluginContext *pContext, const cell_t *params)
-{
-    if (PickupWeaponDetour != NULL)
-        PickupWeaponDetour->EnableDetour();
-    if (CanPickupDetour != NULL)
-        CanPickupDetour->EnableDetour();
-    return params[1];
-}
+// cell_t EnableDetours(IPluginContext *pContext, const cell_t *params)
+// {
+//     if (PickupWeaponDetour != NULL)
+//         PickupWeaponDetour->EnableDetour();
+//     if (CanPickupDetour != NULL)
+//         CanPickupDetour->EnableDetour();
+//     return params[1];
+// }
 
-cell_t DisableDetours(IPluginContext *pContext, const cell_t *params)
-{
-    if (PickupWeaponDetour != NULL)
-        PickupWeaponDetour->DisableDetour();
-    if (CanPickupDetour != NULL)
-        CanPickupDetour->DisableDetour();
-    return params[1];
-}
+// cell_t DisableDetours(IPluginContext *pContext, const cell_t *params)
+// {
+//     if (PickupWeaponDetour != NULL)
+//         PickupWeaponDetour->DisableDetour();
+//     if (CanPickupDetour != NULL)
+//         CanPickupDetour->DisableDetour();
+//     return params[1];
+// }
 
 
 // cell_t ReferenceFunc(IPluginContext *pContext, const cell_t *params)
