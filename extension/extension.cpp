@@ -154,6 +154,7 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     
     if (!InitCanPickupDetour()) return false;
 
+    if (!InitPickupWeaponDetour()) return false;
     
     // INIT_DETOUR(TryToPickupDetour, TryToPickupDetourFunc, "CTFPlayer::TryToPickupDroppedWeapon", 31);
     return true;
@@ -208,7 +209,7 @@ bool InitPickupWeaponDetour()
         return false;
     }
     else
-        g_pSM->LogMessage(myself, "Initialized & encabled detour for %s", gamedataKey);
+        g_pSM->LogMessage(myself, "Initialized & enabled detour for %s", gamedataKey);
 
     return true;
 }
@@ -224,10 +225,6 @@ void Freeguns::SDK_OnUnload()
 
 void Freeguns::SDK_OnAllLoaded()
 {
-    // if (!
-        InitPickupWeaponDetour();
-    // ) return false;
-    
     // sharesys->AddNatives(myself, MyNatives);
 }
 
