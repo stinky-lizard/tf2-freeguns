@@ -55,10 +55,6 @@ bool InitCanPickupDetour();
 bool InitPickupWeaponDetour();
 
 
-//dummy class to compile. seems to work in game?
-class CTFDroppedWeapon;
-
-
 IGameConfig *g_pGameConf = NULL;
 
 CDetour *CanPickupDetour = NULL;
@@ -66,7 +62,7 @@ CDetour *PickupWeaponDetour = NULL;
 // CDetour *TryToPickupDetour;
 //declare and define the new function - the "wrapper" around the original
 //keep in mind it's not bound or enabled yet! the function is just defined
-DETOUR_DECL_MEMBER1(CanPickupDetourFunc, bool, const CTFDroppedWeapon *, pWeapon)
+DETOUR_DECL_MEMBER1(CanPickupDroppedWeapon, bool, const void *, pWeapon)
 {
     //pre-original stuff
 
@@ -76,7 +72,7 @@ DETOUR_DECL_MEMBER1(CanPickupDetourFunc, bool, const CTFDroppedWeapon *, pWeapon
     
     
     //call original
-    bool out = DETOUR_MEMBER_CALL(CanPickupDetourFunc)(pWeapon);
+    bool out = DETOUR_MEMBER_CALL(CanPickupDroppedWeapon)(pWeapon);
     
     g_pSM->LogMessage(myself, "This is right after CanPickup!");
     //post-original stuff
@@ -85,7 +81,7 @@ DETOUR_DECL_MEMBER1(CanPickupDetourFunc, bool, const CTFDroppedWeapon *, pWeapon
     return out; 
 }
 
-DETOUR_DECL_MEMBER1(PickupWeaponDetourFunc, bool, CTFDroppedWeapon *, pDroppedWeapon)
+DETOUR_DECL_MEMBER1(PickupWeaponFromOther, bool, void *, pDroppedWeapon)
 {
     //pre-original stuff
 
@@ -95,7 +91,8 @@ DETOUR_DECL_MEMBER1(PickupWeaponDetourFunc, bool, CTFDroppedWeapon *, pDroppedWe
     
     
     //call original
-    bool out = DETOUR_MEMBER_CALL(PickupWeaponDetourFunc)(pDroppedWeapon);
+    bool out = DETOUR_MEMBER_CALL(PickupWeaponFromOther)(pDroppedWeapon);
+    
     
     g_pSM->LogMessage(myself, "This is right after PickupWeapon!");
     //post-original stuff
@@ -167,7 +164,7 @@ bool InitCanPickupDetour()
 {
     const char* gamedataKey = "CTFPlayer::CanPickupDroppedWeapon";
     
-    CanPickupDetour = DETOUR_CREATE_MEMBER(CanPickupDetourFunc, gamedataKey);
+    CanPickupDetour = DETOUR_CREATE_MEMBER(CanPickupDroppedWeapon, gamedataKey);
     
     if (CanPickupDetour == NULL)
     {
@@ -193,7 +190,7 @@ bool InitPickupWeaponDetour()
 {
     const char* gamedataKey = "CTFPlayer::PickupWeaponFromOther";
     
-    PickupWeaponDetour = DETOUR_CREATE_MEMBER(PickupWeaponDetourFunc, gamedataKey);
+    PickupWeaponDetour = DETOUR_CREATE_MEMBER(PickupWeaponFromOther, gamedataKey);
     
     if (PickupWeaponDetour == NULL)
     {
@@ -217,8 +214,8 @@ bool InitPickupWeaponDetour()
 
 void Freeguns::SDK_OnUnload()
 {
-    if (CanPickupDetour != NULL)
-        CanPickupDetour->Destroy();
+    // if (CanPickupDetour != NULL)
+    //     CanPickupDetour->Destroy();
     // if (PickupWeaponDetour != NULL)
     //     PickupWeaponDetour->Destroy();
 }
