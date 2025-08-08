@@ -66,16 +66,16 @@ public void OnPluginStart()
 
 	if(hGameConf == INVALID_HANDLE) SetFailState("FreeGuns: Gamedata not found!");
 
-	StartPrepSDKCall(SDKCall_Raw);
-	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CBaseEntity::GetBaseEntity");
-	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
-	hSDKCallGetBaseEntity = EndPrepSDKCall();
-	if (!hSDKCallGetBaseEntity) SetFailState("Failed to setup SDKCall for GetBaseEntity. (Error code 101)");
+	// StartPrepSDKCall(SDKCall_Raw);
+	// PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CBaseEntity::GetBaseEntity");
+	// PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
+	// hSDKCallGetBaseEntity = EndPrepSDKCall();
+	// if (!hSDKCallGetBaseEntity) SetFailState("Failed to setup SDKCall for GetBaseEntity. (Error code 101)");
 
-	StartPrepSDKCall(SDKCall_Entity);
-	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CTFWeaponBase::UpdateHands");
-	hSDKCallUpdateHands = EndPrepSDKCall();
-	if (!hSDKCallUpdateHands) SetFailState("Failed to setup SDKCall for UpdateHands. (Error code 102)");
+	// StartPrepSDKCall(SDKCall_Entity);
+	// PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CTFWeaponBase::UpdateHands");
+	// hSDKCallUpdateHands = EndPrepSDKCall();
+	// if (!hSDKCallUpdateHands) SetFailState("Failed to setup SDKCall for UpdateHands. (Error code 102)");
 
 	//TODO: make detours extension
 

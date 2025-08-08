@@ -61,8 +61,8 @@ class CTFDroppedWeapon;
 
 IGameConfig *g_pGameConf = NULL;
 
-CDetour *CanPickupDetour;
-CDetour *PickupWeaponDetour;
+CDetour *CanPickupDetour = NULL;
+CDetour *PickupWeaponDetour = NULL;
 // CDetour *TryToPickupDetour;
 //declare and define the new function - the "wrapper" around the original
 //keep in mind it's not bound or enabled yet! the function is just defined
@@ -151,7 +151,7 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 
     //init and enable detours here
     CDetourManager::Init(g_pSM->GetScriptingEngine(), g_pGameConf);
-
+    
     if (!InitCanPickupDetour()) return false;
     if (!InitPickupWeaponDetour()) return false;
     
@@ -216,10 +216,10 @@ bool InitPickupWeaponDetour()
 
 void Freeguns::SDK_OnUnload()
 {
-    if (PickupWeaponDetour != NULL)
-        PickupWeaponDetour->Destroy();
     if (CanPickupDetour != NULL)
         CanPickupDetour->Destroy();
+    // if (PickupWeaponDetour != NULL)
+    //     PickupWeaponDetour->Destroy();
 }
 
 void Freeguns::SDK_OnAllLoaded()
