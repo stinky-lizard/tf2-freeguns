@@ -177,7 +177,10 @@ bool InitCanPickupDetour()
     CanPickupDetour->EnableDetour();
     
     if (!(CanPickupDetour->IsEnabled()))
+    {
         g_pSM->LogError(myself, "Could not enable %s detour (Error code 12)", gamedataKey);
+        return false;
+    }
     else
         g_pSM->LogMessage(myself, "Initialized & enabled detour for %s", gamedataKey);
     
@@ -200,7 +203,10 @@ bool InitPickupWeaponDetour()
     PickupWeaponDetour->EnableDetour();
     
     if (!(PickupWeaponDetour->IsEnabled()))
+    {
         g_pSM->LogError(myself, "Could not enable %s detour (Error code 22)", gamedataKey);
+        return false;
+    }
     else
         g_pSM->LogMessage(myself, "Initialized & enabled detour for %s", gamedataKey);
 
