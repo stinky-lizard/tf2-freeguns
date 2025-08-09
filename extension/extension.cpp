@@ -30,9 +30,9 @@
  */
 
 #include "extension.h"
+#include "freeguns.h"
 #include <string>
 #include <iostream>
-#include <safetyhook.hpp>
 using namespace std;
 
 /**
@@ -50,31 +50,6 @@ SMEXT_LINK(&g_Freeguns);
 
 // cell_t EnableDetours(IPluginContext *pContext, const cell_t *params);
 // cell_t DisableDetours(IPluginContext *pContext, const cell_t *params);
-
-class CTFDroppedWeapon;
-
-class CTFPlayer
-{
-public:
-    bool CanPickupDroppedWeapon( const CTFDroppedWeapon *pWeapon );
-    bool PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
-};
-
-bool InitCanPickupDetour();
-bool InitPickupWeaponDetour();
-
-IGameConfig *g_pGameConf = NULL;
-
-SafetyHookInline g_CanPickup_hook{};
-SafetyHookInline g_PickupWeapon_hook{};
-
-class CTFPlayerDetours : public CTFPlayer
-{
-public:
-    bool detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon);
-    bool detour_PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
-
-};
 
 /*
 Bind Natives & Hooks 
