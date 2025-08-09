@@ -32,6 +32,7 @@
 #include "extension.h"
 #include <string>
 #include <iostream>
+#include <safetyhook.hpp>
 using namespace std;
 
 /**
@@ -50,11 +51,25 @@ SMEXT_LINK(&g_Freeguns);
 // cell_t EnableDetours(IPluginContext *pContext, const cell_t *params);
 // cell_t DisableDetours(IPluginContext *pContext, const cell_t *params);
 
+class CTFDroppedWeapon;
+
+class CTFPlayer
+{
+public:
+    bool CanPickupDroppedWeapon( const CTFDroppedWeapon *pWeapon );
+    bool PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
+};
+
 bool InitCanPickupDetour();
 bool InitPickupWeaponDetour();
 
 IGameConfig *g_pGameConf = NULL;
 
+SafetyHookInline g_CanPickup_hook{};
+SafetyHookInline g_PickupWeapon_hook{};
+
+bool detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon);
+bool detour_PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
 
 /*
 Bind Natives & Hooks 
@@ -97,14 +112,60 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 bool InitCanPickupDetour()
 {
     const char* gamedataKey = "CTFPlayer::CanPickupDroppedWeapon";
-    return true;    
+    void *pAddress;
+
+    if (!g_pGameConf->GetMemSig(gamedataKey, &pAddress))
+	{
+		g_pSM->LogError(myself, "Signature for %s not found in gamedata", gamedataKey);
+		return NULL;
+	}
+
+	if (!pAddress)
+	{
+		g_pSM->LogError(myself, "Sigscan for %s failed", gamedataKey);
+		return NULL;
+	}
+    g_pSM->LogMessage(myself, "Got sig for %s", gamedataKey);
+    
+    void *callback = reinterpret_cast<void*>(&detour_CanPickupDroppedWeapon);
+    
+    g_CanPickup_hook = safetyhook::create_inline(pAddress, callback);
+ 
+    g_pSM->LogMessage(myself, "Created InlineHook for %s", gamedataKey);
+
+    return true;
 }
+
+bool detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon)
+{
+    g_pSM->LogMessage(myself, "Hello, world!");
+    g_pSM->LogMessage(myself, "DETOUR: PRE   CanPickup");
+
+    bool out = g_CanPickup_hook.call<bool>(pWeapon);
+
+    g_pSM->LogMessage(myself, "DETOUR: POST  CanPickup");
+
+    return out;
+}
+
 
 //Iniitialize and enable PickupWeaponFromOther detour. Use only once after CDetourManager::Init
 bool InitPickupWeaponDetour()
 {
     const char* gamedataKey = "CTFPlayer::PickupWeaponFromOther";
     return true;
+}
+
+
+bool detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWeapon)
+{
+    g_pSM->LogMessage(myself, "DETOUR: PRE   PickupWeapon");
+
+    bool out = g_PickupWeapon_hook.call<bool>(pDroppedWeapon);
+
+    g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");
+    
+    return out;
 }
 
 
