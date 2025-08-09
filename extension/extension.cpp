@@ -82,7 +82,6 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     
     if (!InitDetour("CTFPlayer::PickupWeaponFromOther", &g_PickupWeapon_hook, (void*)(&CTFPlayerDetours::detour_PickupWeaponFromOther))) return false;
     
-    // INIT_DETOUR(TryToPickupDetour, TryToPickupDetourFunc, "CTFPlayer::TryToPickupDroppedWeapon", 31);
     return true;
 }
 
@@ -103,18 +102,18 @@ bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback)
 		g_pSM->LogError(myself, "Sigscan for %s failed", gamedata);
 		return false;
 	}
-    g_pSM->LogMessage(myself, "Got sig for %s", gamedata);
+    // g_pSM->LogMessage(myself, "Got sig for %s", gamedata);               //DEBUG
     
     *hookObj = safetyhook::create_inline(pAddress, callback);
 
-    g_pSM->LogMessage(myself, "Created InlineHook for %s", gamedata);
+    // g_pSM->LogMessage(myself, "Created InlineHook for %s", gamedata);    //DEBUG
 
     return true;
 }
 
 bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon)
 {
-    g_pSM->LogMessage(myself, "Hello, world!");
+    g_pSM->LogMessage(myself, "Starting pickup process.");
     g_pSM->LogMessage(myself, "DETOUR: PRE   CanPickup");
     
     bool out = g_CanPickup_hook.thiscall<bool>(this, pWeapon);
@@ -139,10 +138,6 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
 
 void Freeguns::SDK_OnUnload()
 {
-    // if (CanPickupDetour != NULL)
-    //     CanPickupDetour->Destroy();
-    // if (PickupWeaponDetour != NULL)
-    //     PickupWeaponDetour->Destroy();
     g_CanPickup_hook = {};
     g_PickupWeapon_hook = {};
 }
@@ -155,25 +150,6 @@ void Freeguns::SDK_OnAllLoaded()
 /*
     Native Definitions
 */
-
-// cell_t EnableDetours(IPluginContext *pContext, const cell_t *params)
-// {
-//     if (PickupWeaponDetour != NULL)
-//         PickupWeaponDetour->EnableDetour();
-//     if (CanPickupDetour != NULL)
-//         CanPickupDetour->EnableDetour();
-//     return params[1];
-// }
-
-// cell_t DisableDetours(IPluginContext *pContext, const cell_t *params)
-// {
-//     if (PickupWeaponDetour != NULL)
-//         PickupWeaponDetour->DisableDetour();
-//     if (CanPickupDetour != NULL)
-//         CanPickupDetour->DisableDetour();
-//     return params[1];
-// }
-
 
 // cell_t ReferenceFunc(IPluginContext *pContext, const cell_t *params)
 // {
