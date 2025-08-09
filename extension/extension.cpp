@@ -75,43 +75,39 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 		}
 		return false;
 	}
-
+    
     //init and enable detours here
-
-    if (!InitCanPickupDetour()) return false;
-
-    if (!InitPickupWeaponDetour()) return false;
+    
+    if (!InitDetour("CTFPlayer::CanPickupDroppedWeapon", &g_CanPickup_hook, (void*)(&CTFPlayerDetours::detour_CanPickupDroppedWeapon))) return false;
+    
+    if (!InitDetour("CTFPlayer::PickupWeaponFromOther", &g_PickupWeapon_hook, (void*)(&CTFPlayerDetours::detour_PickupWeaponFromOther))) return false;
     
     // INIT_DETOUR(TryToPickupDetour, TryToPickupDetourFunc, "CTFPlayer::TryToPickupDroppedWeapon", 31);
     return true;
 }
 
-//I could consolidate these functions into a macro to save space, but I think it's easier to read this way. Easier to work with too
 
-//Iniitialize and enable CanPickupDroppedWeapon detour. Use only once after CDetourManager::Init
-bool InitCanPickupDetour()
+//Iniitialize detours
+bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback)
 {
-    const char* gamedataKey = "CTFPlayer::CanPickupDroppedWeapon";
     void *pAddress;
 
-    if (!g_pGameConf->GetMemSig(gamedataKey, &pAddress))
+    if (!g_pGameConf->GetMemSig(gamedata, &pAddress))
 	{
-		g_pSM->LogError(myself, "Signature for %s not found in gamedata", gamedataKey);
+		g_pSM->LogError(myself, "Signature for %s not found in gamedata", gamedata);
 		return false;
 	}
 
 	if (!pAddress)
 	{
-		g_pSM->LogError(myself, "Sigscan for %s failed", gamedataKey);
+		g_pSM->LogError(myself, "Sigscan for %s failed", gamedata);
 		return false;
 	}
-    g_pSM->LogMessage(myself, "Got sig for %s", gamedataKey);
+    g_pSM->LogMessage(myself, "Got sig for %s", gamedata);
     
-    void *callback = (void*)(&CTFPlayerDetours::detour_CanPickupDroppedWeapon);
-    
-    g_CanPickup_hook = safetyhook::create_inline(pAddress, callback);
+    *hookObj = safetyhook::create_inline(pAddress, callback);
 
-    g_pSM->LogMessage(myself, "Created InlineHook for %s", gamedataKey);
+    g_pSM->LogMessage(myself, "Created InlineHook for %s", gamedata);
 
     return true;
 }
@@ -126,35 +122,6 @@ bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWe
     g_pSM->LogMessage(myself, "DETOUR: POST  CanPickup");
 
     return out;
-}
-
-
-//Iniitialize and enable PickupWeaponFromOther detour. Use only once after CDetourManager::Init
-bool InitPickupWeaponDetour()
-{
-    const char* gamedataKey = "CTFPlayer::PickupWeaponFromOther";
-    void *pAddress;
-
-    if (!g_pGameConf->GetMemSig(gamedataKey, &pAddress))
-	{
-		g_pSM->LogError(myself, "Signature for %s not found in gamedata", gamedataKey);
-		return false;
-	}
-
-	if (!pAddress)
-	{
-		g_pSM->LogError(myself, "Sigscan for %s failed", gamedataKey);
-		return false;
-	}
-    g_pSM->LogMessage(myself, "Got sig for %s", gamedataKey);
-    
-    void *callback = (void*)(&CTFPlayerDetours::detour_PickupWeaponFromOther);
-    
-    g_PickupWeapon_hook = safetyhook::create_inline(pAddress, callback);
-
-    g_pSM->LogMessage(myself, "Created InlineHook for %s", gamedataKey);
-
-    return true;
 }
 
 

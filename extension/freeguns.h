@@ -33,10 +33,9 @@ class CTFPlayerDetours : public CTFPlayer
     
 };
 
-//Wrapper functions to bind the detours
+//Wrapper function to bind the detours
 
-bool InitCanPickupDetour();
-bool InitPickupWeaponDetour();
+bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback);
 
 //Other stuff needed
 
