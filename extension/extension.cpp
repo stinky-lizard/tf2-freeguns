@@ -68,8 +68,13 @@ IGameConfig *g_pGameConf = NULL;
 SafetyHookInline g_CanPickup_hook{};
 SafetyHookInline g_PickupWeapon_hook{};
 
-bool detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon);
-bool detour_PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
+class CTFPlayerDetours : public CTFPlayer
+{
+public:
+    bool detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon);
+    bool detour_PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
+
+};
 
 /*
 Bind Natives & Hooks 
@@ -117,31 +122,31 @@ bool InitCanPickupDetour()
     if (!g_pGameConf->GetMemSig(gamedataKey, &pAddress))
 	{
 		g_pSM->LogError(myself, "Signature for %s not found in gamedata", gamedataKey);
-		return NULL;
+		return false;
 	}
 
 	if (!pAddress)
 	{
 		g_pSM->LogError(myself, "Sigscan for %s failed", gamedataKey);
-		return NULL;
+		return false;
 	}
     g_pSM->LogMessage(myself, "Got sig for %s", gamedataKey);
     
-    void *callback = reinterpret_cast<void*>(&detour_CanPickupDroppedWeapon);
+    void *callback = (void*)(&CTFPlayerDetours::detour_CanPickupDroppedWeapon);
     
     g_CanPickup_hook = safetyhook::create_inline(pAddress, callback);
- 
+
     g_pSM->LogMessage(myself, "Created InlineHook for %s", gamedataKey);
 
     return true;
 }
 
-bool detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon)
+bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon)
 {
     g_pSM->LogMessage(myself, "Hello, world!");
     g_pSM->LogMessage(myself, "DETOUR: PRE   CanPickup");
-
-    bool out = g_CanPickup_hook.call<bool>(pWeapon);
+    
+    bool out = g_CanPickup_hook.thiscall<bool>(this, pWeapon);
 
     g_pSM->LogMessage(myself, "DETOUR: POST  CanPickup");
 
@@ -153,16 +158,37 @@ bool detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon)
 bool InitPickupWeaponDetour()
 {
     const char* gamedataKey = "CTFPlayer::PickupWeaponFromOther";
+    void *pAddress;
+
+    if (!g_pGameConf->GetMemSig(gamedataKey, &pAddress))
+	{
+		g_pSM->LogError(myself, "Signature for %s not found in gamedata", gamedataKey);
+		return false;
+	}
+
+	if (!pAddress)
+	{
+		g_pSM->LogError(myself, "Sigscan for %s failed", gamedataKey);
+		return false;
+	}
+    g_pSM->LogMessage(myself, "Got sig for %s", gamedataKey);
+    
+    void *callback = (void*)(&CTFPlayerDetours::detour_PickupWeaponFromOther);
+    
+    g_PickupWeapon_hook = safetyhook::create_inline(pAddress, callback);
+
+    g_pSM->LogMessage(myself, "Created InlineHook for %s", gamedataKey);
+
     return true;
 }
 
 
-bool detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWeapon)
+bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWeapon)
 {
     g_pSM->LogMessage(myself, "DETOUR: PRE   PickupWeapon");
 
-    bool out = g_PickupWeapon_hook.call<bool>(pDroppedWeapon);
-
+    bool out = g_PickupWeapon_hook.thiscall<bool>(this, pDroppedWeapon);
+    
     g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");
     
     return out;
@@ -175,6 +201,8 @@ void Freeguns::SDK_OnUnload()
     //     CanPickupDetour->Destroy();
     // if (PickupWeaponDetour != NULL)
     //     PickupWeaponDetour->Destroy();
+    g_CanPickup_hook = {};
+    g_PickupWeapon_hook = {};
 }
 
 void Freeguns::SDK_OnAllLoaded()
