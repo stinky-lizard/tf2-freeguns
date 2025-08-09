@@ -54,37 +54,13 @@ SMEXT_LINK(&g_Freeguns);
 bool InitCanPickupDetour();
 bool InitPickupWeaponDetour();
 
-
 IGameConfig *g_pGameConf = NULL;
 
 CDetour *CanPickupDetour = NULL;
 CDetour *PickupWeaponDetour = NULL;
-
-class CTFDroppedWeapon;
-
-class CTFPlayer
-{
-	bool CanPickupDroppedWeapon(const CTFDroppedWeapon* pWeapon);
-	bool PickupWeaponFromOther(CTFDroppedWeapon* pDroppedWeapon);
-};
-
-
 //declare and define the new function - the "wrapper" around the original
 //keep in mind it's not bound or enabled yet! the function is just defined
-
-class CTFPlayerDetour 
-{ 
-public: 
-    bool CanPickupDroppedWeapon(const CTFDroppedWeapon* pWeapon); 
-    static bool (CTFPlayerDetour::* CanPickupDroppedWeapon_Actual)(const CTFDroppedWeapon*); 
-
-    bool PickupWeaponFromOther(CTFDroppedWeapon* pDroppedWeapon); 
-    static bool (CTFPlayerDetour::* PickupWeaponFromOther_Actual)(CTFDroppedWeapon*); 
-}; 
-
-bool (CTFPlayerDetour::* CTFPlayerDetour::CanPickupDroppedWeapon_Actual)(const CTFDroppedWeapon*) = NULL;
-
-bool CTFPlayerDetour::CanPickupDroppedWeapon(const CTFDroppedWeapon* pWeapon)
+DETOUR_DECL_MEMBER1(CanPickupDroppedWeapon, bool, const void *, pWeapon)
 {
     //pre-original stuff
 
@@ -94,7 +70,7 @@ bool CTFPlayerDetour::CanPickupDroppedWeapon(const CTFDroppedWeapon* pWeapon)
     
     
     //call original
-    bool out = (this->*CanPickupDroppedWeapon_Actual)(pWeapon);
+    bool out = DETOUR_MEMBER_CALL(CanPickupDroppedWeapon)(pWeapon);
     
     g_pSM->LogMessage(myself, "This is right after CanPickup!");
     //post-original stuff
@@ -103,10 +79,7 @@ bool CTFPlayerDetour::CanPickupDroppedWeapon(const CTFDroppedWeapon* pWeapon)
     return out; 
 }
 
-
-bool (CTFPlayerDetour::* CTFPlayerDetour::PickupWeaponFromOther_Actual)(CTFDroppedWeapon*) = NULL; 
-
-bool CTFPlayerDetour::PickupWeaponFromOther(CTFDroppedWeapon* pDroppedWeapon)
+DETOUR_DECL_MEMBER1(PickupWeaponFromOther, bool, void *, pDroppedWeapon)
 {
     //pre-original stuff
 
@@ -116,7 +89,7 @@ bool CTFPlayerDetour::PickupWeaponFromOther(CTFDroppedWeapon* pDroppedWeapon)
     
     
     //call original
-    bool out = (this->*PickupWeaponFromOther_Actual)(pDroppedWeapon);
+    bool out = DETOUR_MEMBER_CALL(PickupWeaponFromOther)(pDroppedWeapon);
     
     
     g_pSM->LogMessage(myself, "This is right after PickupWeapon!");
@@ -157,21 +130,19 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     if (!InitCanPickupDetour()) return false;
 
     if (!InitPickupWeaponDetour()) return false;
-
+    
+    // INIT_DETOUR(TryToPickupDetour, TryToPickupDetourFunc, "CTFPlayer::TryToPickupDroppedWeapon", 31);
     return true;
 }
+
+//I could consolidate these functions into a macro to save space, but I think it's easier to read this way. Easier to work with too
 
 //Iniitialize and enable CanPickupDroppedWeapon detour. Use only once after CDetourManager::Init
 bool InitCanPickupDetour()
 {
     const char* gamedataKey = "CTFPlayer::CanPickupDroppedWeapon";
     
-    CanPickupDetour = CDetourManager::CreateDetour
-    (
-        (void *)GetCodeAddr(reinterpret_cast<VoidFunc>(&CTFPlayerDetour::CanPickupDroppedWeapon)), 
-        (void **)(&CTFPlayerDetour::CanPickupDroppedWeapon_Actual), 
-        gamedataKey
-    );
+    CanPickupDetour = DETOUR_CREATE_MEMBER(CanPickupDroppedWeapon, gamedataKey);
     
     if (CanPickupDetour == NULL)
     {
@@ -197,12 +168,7 @@ bool InitPickupWeaponDetour()
 {
     const char* gamedataKey = "CTFPlayer::PickupWeaponFromOther";
     
-    PickupWeaponDetour = CDetourManager::CreateDetour
-    (
-        (void *)GetCodeAddr(reinterpret_cast<VoidFunc>(&CTFPlayerDetour::PickupWeaponFromOther)), 
-        (void **)(&CTFPlayerDetour::PickupWeaponFromOther_Actual), 
-        gamedataKey
-    );
+    PickupWeaponDetour = DETOUR_CREATE_MEMBER(PickupWeaponFromOther, gamedataKey);
     
     if (PickupWeaponDetour == NULL)
     {
