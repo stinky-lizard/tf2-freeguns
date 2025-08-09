@@ -30,6 +30,6 @@ for sdk_name in Extension.sdks:
       continue
 
     binary = Extension.HL2ExtConfig(project, builder, cxx, projectName + '.ext.' + sdk['extension'], sdk)
-    Extension.AddCDetour(binary)
+    Extension.AddSafetyhook(binary)
 
 Extension.extensions += builder.Add(project)
