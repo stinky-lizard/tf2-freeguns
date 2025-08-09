@@ -102,11 +102,11 @@ bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback)
 		g_pSM->LogError(myself, "Sigscan for %s failed", gamedata);
 		return false;
 	}
-    // g_pSM->LogMessage(myself, "Got sig for %s", gamedata);               //DEBUG
+    g_pSM->LogMessage(myself, "Got sig for %s", gamedata);               //DEBUG
     
     *hookObj = safetyhook::create_inline(pAddress, callback);
 
-    // g_pSM->LogMessage(myself, "Created InlineHook for %s", gamedata);    //DEBUG
+    g_pSM->LogMessage(myself, "Created InlineHook for %s", gamedata);    //DEBUG
 
     return true;
 }
@@ -115,8 +115,9 @@ static bool weGood_CanPickup = false;
 
 bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon)
 {
-    g_pSM->LogMessage(myself, "Starting pickup process.");
-    g_pSM->LogMessage(myself, "DETOUR: PRE   CanPickup");
+    g_pSM->LogMessage(myself, "---");              //DEBUG
+    g_pSM->LogMessage(myself, "Starting pickup process.");              //DEBUG
+    g_pSM->LogMessage(myself, "DETOUR: PRE   CanPickup");               //DEBUG
     
     if (!InitDetour("CTFItemDefinition::GetLoadoutSlot", &g_GetLoadout_hook, (void*)(&CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup))) 
         g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_CanPickup!");
@@ -125,16 +126,16 @@ bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWe
     bool out = g_CanPickup_hook.thiscall<bool>(this, pWeapon);
 
     
-    g_pSM->LogMessage(myself, "DETOUR: POST  CanPickup");
+    g_pSM->LogMessage(myself, "DETOUR: POST  CanPickup");               //DEBUG
 
     g_GetLoadout_hook = {};
     
-    if (!weGood_CanPickup) g_pSM->LogMessage(myself, "DETOUR: weGood false...");
+    if (!weGood_CanPickup) g_pSM->LogMessage(myself, "DETOUR: weGood false...");    //DEBUG
 
     if (weGood_CanPickup)
     {
         //this particular one worked out, reset for next time
-        g_pSM->LogMessage(myself, "DETOUR: weGood true!");
+        g_pSM->LogMessage(myself, "DETOUR: weGood true!");              //DEBUG
         weGood_CanPickup = false;
         return true;
     }
@@ -146,23 +147,40 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) con
     //we've reached the GetLoadoutSlot call without returning, which means we've passed all the basic checks in CanPickup
     //(is alive, isn't taunting, etc.)
     //we also passed the check for if we have an active weapon, which I'm not completely sure if we need... but eh.
+    g_pSM->LogMessage(myself, "DETOUR: PRE   GetLoadout_CP");                //DEBUG
+    g_pSM->LogMessage(myself, "DETOUR: Setting weGood");                //DEBUG
     weGood_CanPickup = true;
-    g_pSM->LogMessage(myself, "DETOUR: Setting weGood");
     
-    return g_CanPickup_hook.thiscall<int>(this, iLoadoutClass);
+    if (!g_GetLoadout_hook) g_pSM->LogMessage(myself, "DETOUR: Something's wrong...");                //DEBUG
+    
+    return g_GetLoadout_hook.thiscall<int>(this, iLoadoutClass);
 }
 
 bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWeapon)
 {
-    g_pSM->LogMessage(myself, "DETOUR: PRE   PickupWeapon");
+    g_pSM->LogMessage(myself, "DETOUR: PRE   PickupWeapon");            //DEBUG
+    
+    if (!InitDetour("CTFItemDefinition::GetLoadoutSlot", &g_GetLoadout_hook, (void*)(&CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon))) 
+        g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_PickupWeapon!");
 
     bool out = g_PickupWeapon_hook.thiscall<bool>(this, pDroppedWeapon);
     
-    g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");
+    g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");            //DEBUG
     
     return out;
 }
 
+int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) const
+{
+    g_pSM->LogMessage(myself, "DETOUR: PRE   GetLoadout_PW");                //DEBUG
+    
+    bool out = g_GetLoadout_hook.thiscall<int>(this, iLoadoutClass);
+    
+    
+    g_pSM->LogMessage(myself, "DETOUR: POST  GetLoadout_PW");                //DEBUG
+
+    return out;
+}
 
 void Freeguns::SDK_OnUnload()
 {
