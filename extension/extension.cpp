@@ -78,17 +78,92 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     
     //init and enable detours here
     
-    if (!InitDetour("CTFPlayer::CanPickupDroppedWeapon", &g_CanPickup_hook, (void*)(&CTFPlayerDetours::detour_CanPickupDroppedWeapon))) return false;
+    //patch CanPickup
+    if (!InitCanPickupPatch()) return false;
     
-    if (!InitDetour("CTFPlayer::PickupWeaponFromOther", &g_PickupWeapon_hook, (void*)(&CTFPlayerDetours::detour_PickupWeaponFromOther))) return false;
-    
+    //init the detour for pickupweapon in which we will patch it
+    if(!InitPickupWeaponDetour()) return false;
+
     return true;
 }
 
 
 //Iniitialize detours
-bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback)
+bool InitCanPickupPatch()
 {
+    ZydisDecoder decoder{};
+
+#if SAFETYHOOK_ARCH_X86_64
+    ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
+#elif SAFETYHOOK_ARCH_X86_32
+    ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LEGACY_32, ZYDIS_STACK_WIDTH_32);
+#endif
+
+    auto instructionPointer = (void*)(&CTFPlayer::CanPickupDroppedWeapon);
+
+    // while (*instructionPointer != 0xC3) {
+    //     ZydisDecodedInstruction ix{};
+
+    //     ZydisDecoderDecodeInstruction(&decoder, nullptr, reinterpret_cast<void*>(instructionPointer), 15, &ix);
+
+    //     // Follow JMPs
+    //     if (ix.opcode == 0xE9) {
+    //         instructionPointer += ix.length + (int32_t)ix.raw.imm[0].value.s;
+    //     } else {
+    //         instructionPointer += ix.length;
+    //     }
+    // }
+    instructionPointer += 0xB3; //switch instruction pointer to just after GetActiveWeapon assert and check
+
+    g_CanPickup_hook_1 = safetyhook::create_mid(instructionPointer, patch_CanPickupDroppedWeapon_1);
+    
+    instructionPointer += 0xA7; //"jump" to end of function
+
+    g_CanPickup_hook_2 = safetyhook::create_mid(instructionPointer, patch_CanPickupDroppedWeapon_2);
+
+    return true;
+}
+
+static bool we_good_CanPickup = false;
+
+void patch_CanPickupDroppedWeapon_1(SafetyHookContext& ctx)
+{
+    //this will run just after GetActiveWeapon... I hope
+    we_good_CanPickup = true;
+}
+
+void patch_CanPickupDroppedWeapon_2(SafetyHookContext& ctx)
+{
+    if (we_good_CanPickup)
+    {
+        g_pSM->LogMessage(myself, "we good");
+
+        #if SAFETYHOOK_OS_WINDOWS
+            #if SAFETYHOOK_ARCH_X86_64
+                g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);
+                ctx.rax = 1;
+            #elif SAFETYHOOK_ARCH_X86_32
+                g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);
+                ctx.eax = 1;
+            #endif
+        #elif SAFETYHOOK_OS_LINUX
+            #if SAFETYHOOK_ARCH_X86_64
+                g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);
+                ctx.rax = 1;
+            #elif SAFETYHOOK_ARCH_X86_32
+                g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);
+                ctx.eax = 1;
+            #endif
+        #endif
+    }
+    else g_pSM->LogMessage(myself, "we not good");
+
+}
+
+
+bool InitPickupWeaponDetour()
+{
+    const char* gamedata = "CTFPlayer::PickupWeaponFromOther";
     void *pAddress;
 
     if (!g_pGameConf->GetMemSig(gamedata, &pAddress))
@@ -102,25 +177,15 @@ bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback)
 		g_pSM->LogError(myself, "Sigscan for %s failed", gamedata);
 		return false;
 	}
-    // g_pSM->LogMessage(myself, "Got sig for %s", gamedata);               //DEBUG
+    g_pSM->LogMessage(myself, "Got sig for %s", gamedata);
     
-    *hookObj = safetyhook::create_inline(pAddress, callback);
+    void *callback = (void*)(&CTFPlayerDetours::detour_PickupWeaponFromOther);
+    
+    g_PickupWeapon_hook = safetyhook::create_inline(pAddress, callback);
 
-    // g_pSM->LogMessage(myself, "Created InlineHook for %s", gamedata);    //DEBUG
+    g_pSM->LogMessage(myself, "Created InlineHook for %s", gamedata);
 
     return true;
-}
-
-bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon)
-{
-    g_pSM->LogMessage(myself, "Starting pickup process.");
-    g_pSM->LogMessage(myself, "DETOUR: PRE   CanPickup");
-    
-    bool out = g_CanPickup_hook.thiscall<bool>(this, pWeapon);
-
-    g_pSM->LogMessage(myself, "DETOUR: POST  CanPickup");
-
-    return out;
 }
 
 
@@ -138,7 +203,8 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
 
 void Freeguns::SDK_OnUnload()
 {
-    g_CanPickup_hook = {};
+    g_CanPickup_hook_1 = {};
+    g_CanPickup_hook_2 = {};
     g_PickupWeapon_hook = {};
 }
 
