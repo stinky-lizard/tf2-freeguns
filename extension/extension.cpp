@@ -111,18 +111,46 @@ bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback)
     return true;
 }
 
+static bool weGood_CanPickup = false;
+
 bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon)
 {
     g_pSM->LogMessage(myself, "Starting pickup process.");
     g_pSM->LogMessage(myself, "DETOUR: PRE   CanPickup");
     
+    if (!InitDetour("CTFItemDefinition::GetLoadoutSlot", &g_GetLoadout_hook, (void*)(&CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup))) 
+        g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_CanPickup!");
+    
+
     bool out = g_CanPickup_hook.thiscall<bool>(this, pWeapon);
 
+    
     g_pSM->LogMessage(myself, "DETOUR: POST  CanPickup");
 
-    return out;
+    g_GetLoadout_hook = {};
+    
+    if (!weGood_CanPickup) g_pSM->LogMessage(myself, "DETOUR: weGood false...");
+
+    if (weGood_CanPickup)
+    {
+        //this particular one worked out, reset for next time
+        g_pSM->LogMessage(myself, "DETOUR: weGood true!");
+        weGood_CanPickup = false;
+        return true;
+    }
+    else return out; //already false
 }
 
+int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) const
+{
+    //we've reached the GetLoadoutSlot call without returning, which means we've passed all the basic checks in CanPickup
+    //(is alive, isn't taunting, etc.)
+    //we also passed the check for if we have an active weapon, which I'm not completely sure if we need... but eh.
+    weGood_CanPickup = true;
+    g_pSM->LogMessage(myself, "DETOUR: Setting weGood");
+    
+    return g_CanPickup_hook.thiscall<int>(this, iLoadoutClass);
+}
 
 bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWeapon)
 {
@@ -140,6 +168,7 @@ void Freeguns::SDK_OnUnload()
 {
     g_CanPickup_hook = {};
     g_PickupWeapon_hook = {};
+    g_GetLoadout_hook = {};
 }
 
 void Freeguns::SDK_OnAllLoaded()

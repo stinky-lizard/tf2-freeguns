@@ -13,24 +13,45 @@ class CTFDroppedWeapon;
 
 class CTFPlayer
 {
-    public:
+    
+public:
     bool CanPickupDroppedWeapon( const CTFDroppedWeapon *pWeapon );
     bool PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
+
+};
+
+class CTFItemDefinition
+{
+
+public:
+    int GetLoadoutSlot( int iLoadoutClass ) const;
+
 };
 
 //Safetyhook hook/detour objects
 
 SafetyHookInline g_CanPickup_hook{};
 SafetyHookInline g_PickupWeapon_hook{};
+SafetyHookInline g_GetLoadout_hook{};
 
 //Detour functions to bind to the objects
 
 class CTFPlayerDetours : public CTFPlayer
 {
-    public:
-    bool detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon);
+
+public:
+    bool detour_CanPickupDroppedWeapon( const CTFDroppedWeapon *pWeapon );
     bool detour_PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
     
+};
+
+class CTFItemDefDetours : CTFItemDefinition
+{
+
+public:
+    int detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) const; //might as well make this const too
+    int detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) const; 
+
 };
 
 //Wrapper function to bind the detours
