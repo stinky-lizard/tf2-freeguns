@@ -389,7 +389,7 @@ class ExtensionConfig(object):
     return binary
 
   def AddCDetour(self, binary):
-    binary.sources += [ os.path.join(self.sm_root, 'public', 'CDetour', 'detours.cpp') ]
+    # binary.sources += [ os.path.join(self.sm_root, 'public', 'CDetour', 'detours.cpp') ]
     binary.compiler.cxxincludes += [ os.path.join(self.sm_root, 'public', 'safetyhook', 'include') ]
 
     for task in self.libsafetyhook:

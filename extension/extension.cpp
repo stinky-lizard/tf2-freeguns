@@ -32,7 +32,6 @@
 #include "extension.h"
 #include <string>
 #include <iostream>
-#include <CDetour/detours.h>
 using namespace std;
 
 /**
@@ -56,48 +55,6 @@ bool InitPickupWeaponDetour();
 
 IGameConfig *g_pGameConf = NULL;
 
-CDetour *CanPickupDetour = NULL;
-CDetour *PickupWeaponDetour = NULL;
-//declare and define the new function - the "wrapper" around the original
-//keep in mind it's not bound or enabled yet! the function is just defined
-DETOUR_DECL_MEMBER1(CanPickupDroppedWeapon, bool, const void *, pWeapon)
-{
-    //pre-original stuff
-
-    //todo: determine needed class from weapon & change player to class
-    
-    g_pSM->LogMessage(myself, "Hello, world! This is right before CanPickup!");
-    
-    
-    //call original
-    bool out = DETOUR_MEMBER_CALL(CanPickupDroppedWeapon)(pWeapon);
-    
-    g_pSM->LogMessage(myself, "This is right after CanPickup!");
-    //post-original stuff
-    
-    //todo: switch player back to original class
-    return out; 
-}
-
-DETOUR_DECL_MEMBER1(PickupWeaponFromOther, bool, void *, pDroppedWeapon)
-{
-    //pre-original stuff
-
-    //todo: determine needed class from weapon & change player to class
-    
-    g_pSM->LogMessage(myself, "This is right before PickupWeapon!");
-    
-    
-    //call original
-    bool out = DETOUR_MEMBER_CALL(PickupWeaponFromOther)(pDroppedWeapon);
-    
-    
-    g_pSM->LogMessage(myself, "This is right after PickupWeapon!");
-    //post-original stuff
-    
-    //todo: switch player back to original class
-    return out; 
-}
 
 /*
 Bind Natives & Hooks 
@@ -125,8 +82,7 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 	}
 
     //init and enable detours here
-    CDetourManager::Init(g_pSM->GetScriptingEngine(), g_pGameConf);
-    
+
     if (!InitCanPickupDetour()) return false;
 
     if (!InitPickupWeaponDetour()) return false;
@@ -141,51 +97,13 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 bool InitCanPickupDetour()
 {
     const char* gamedataKey = "CTFPlayer::CanPickupDroppedWeapon";
-    
-    CanPickupDetour = DETOUR_CREATE_MEMBER(CanPickupDroppedWeapon, gamedataKey);
-    
-    if (CanPickupDetour == NULL)
-    {
-        g_pSM->LogError(myself, "Could not initialize %s detour (Error code 11)", gamedataKey);
-        return false;
-    }
-    
-    CanPickupDetour->EnableDetour();
-    
-    if (!(CanPickupDetour->IsEnabled()))
-    {
-        g_pSM->LogError(myself, "Could not enable %s detour (Error code 12)", gamedataKey);
-        return false;
-    }
-    else
-        g_pSM->LogMessage(myself, "Initialized & enabled detour for %s", gamedataKey);
-    
-    return true;
+    return true;    
 }
 
 //Iniitialize and enable PickupWeaponFromOther detour. Use only once after CDetourManager::Init
 bool InitPickupWeaponDetour()
 {
     const char* gamedataKey = "CTFPlayer::PickupWeaponFromOther";
-    
-    PickupWeaponDetour = DETOUR_CREATE_MEMBER(PickupWeaponFromOther, gamedataKey);
-    
-    if (PickupWeaponDetour == NULL)
-    {
-        g_pSM->LogError(myself, "Could not initialize %s detour (Error code 21)", gamedataKey);
-        return false;
-    }
-
-    PickupWeaponDetour->EnableDetour();
-    
-    if (!(PickupWeaponDetour->IsEnabled()))
-    {
-        g_pSM->LogError(myself, "Could not enable %s detour (Error code 22)", gamedataKey);
-        return false;
-    }
-    else
-        g_pSM->LogMessage(myself, "Initialized & enabled detour for %s", gamedataKey);
-
     return true;
 }
 
