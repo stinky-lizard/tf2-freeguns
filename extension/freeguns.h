@@ -2,6 +2,7 @@
 #define _INCLUDE_SOURCEMOD_EXTENSION_FREEGUNS_H_
 
 #include <safetyhook.hpp>
+#include <Zydis.h>
 
 /*
  * Declarations for the Freeguns extension's functionality.
@@ -20,22 +21,27 @@ class CTFPlayer
 
 //Safetyhook hook/detour objects
 
-SafetyHookInline g_CanPickup_hook{};
+SafetyHookMid g_CanPickup_hook_1{};
+SafetyHookMid g_CanPickup_hook_2{};
 SafetyHookInline g_PickupWeapon_hook{};
 
 //Detour functions to bind to the objects
 
+//In class for extending CTFPlayer and (this)
 class CTFPlayerDetours : public CTFPlayer
 {
     public:
-    bool detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon);
     bool detour_PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
-    
 };
 
-//Wrapper function to bind the detours
+//Out of class bc doesn't need it (and create_mid wants it)
+void patch_CanPickupDroppedWeapon_1(SafetyHookContext& ctx);
+void patch_CanPickupDroppedWeapon_2(SafetyHookContext& ctx);
 
-bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback);
+//Wrapper functions to bind the detours
+
+bool InitCanPickupPatch();
+bool InitPickupWeaponDetour();
 
 //Other stuff needed
 
