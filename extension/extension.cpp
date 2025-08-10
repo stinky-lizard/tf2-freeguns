@@ -175,13 +175,13 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     //get the associated weapon
     // const CEconItemView *pItem = pDroppedWeapon->GetItem();
     CEconItemView *pItem;
-    ArgBuffer<void*> vstk(pDroppedWeapon);
-    CallWrappers::GetItem->Execute(vstk, &pItem);
+    ArgBuffer<void*> vstk1(pDroppedWeapon);
+    CallWrappers::GetItem->Execute(vstk1, &pItem);
 
     // if (!pItem || !pItem->IsValid()) 
     bool IsPItemValid;
-    ArgBuffer<void*> vstk(pItem);
-    CallWrappers::IsValid->Execute(vstk, &IsPItemValid);
+    ArgBuffer<void*> vstk2(pItem);
+    CallWrappers::IsValid->Execute(vstk2, &IsPItemValid);
     
     if (!pItem || !IsPItemValid) 
     {    
@@ -192,22 +192,22 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     //can we use this weapon without further effort? i.e. is this weapon meant for us?
     // int myClassIndex = GetPlayerClass()->GetClassIndex();
     CTFPlayerClass* myClass; 
-    ArgBuffer<void*> vstk(this);
-    CallWrappers::GetPlayerClass->Execute(vstk, &myClass);
+    ArgBuffer<void*> vstk3(this);
+    CallWrappers::GetPlayerClass->Execute(vstk3, &myClass);
     
     int myClassIndex;
-    ArgBuffer<void*> vstk(myClass);
-    CallWrappers::GetClassIndex->Execute(vstk, &myClassIndex);
+    ArgBuffer<void*> vstk4(myClass);
+    CallWrappers::GetClassIndex->Execute(vstk4, &myClassIndex);
 
 
     // bool canUseCurrentClass = pItem->GetStaticData()->CanBeUsedByClass(myClass);
     CTFItemDefinition *pItemStaticData;
-    ArgBuffer<void*> vstk(pItem);
-    CallWrappers::GetStaticData->Execute(vstk, &pItemStaticData);
+    ArgBuffer<void*> vstk5(pItem);
+    CallWrappers::GetStaticData->Execute(vstk5, &pItemStaticData);
     
     bool canUseCurrentClass;
-    ArgBuffer<void*, int> vstk(pItemStaticData, myClassIndex);
-    CallWrappers::CanBeUsedByClass->Execute(vstk, &canUseCurrentClass);
+    ArgBuffer<void*, int> vstk6(pItemStaticData, myClassIndex);
+    CallWrappers::CanBeUsedByClass->Execute(vstk6, &canUseCurrentClass);
 
 
     //if yes, we can just call the original function and it'll all work out.
@@ -217,8 +217,8 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     {
         //get the default slot for this weapon (almost always the only slot, minus the shotgun, which will be a primary)
         // slotToPlaceItemIn_PickupWeapon = pItem->GetStaticData()->GetDefaultLoadoutSlot();
-        ArgBuffer<void*> vstk(pItemStaticData);
-        CallWrappers::GetDefaultLoadoutSlot->Execute(vstk, &slotToPlaceItemIn_PickupWeapon);
+        ArgBuffer<void*> vstk7(pItemStaticData);
+        CallWrappers::GetDefaultLoadoutSlot->Execute(vstk7, &slotToPlaceItemIn_PickupWeapon);
 
         //detour GetLoadoutSlot so we can replace the slot it says with our own
         if (!InitDetour("CTFItemDefinition::GetLoadoutSlot", &g_GetLoadout_hook, (void*)(&CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon))) 
@@ -267,7 +267,15 @@ void Freeguns::SDK_OnUnload()
     g_PickupWeapon_hook = {};
     g_GetLoadout_hook = {};
 
-    //TODO: destroy callers
+    //destroy callers
+    CallWrappers::wrappersInitialized = false;
+    CallWrappers::CanBeUsedByClass->Destroy();
+    CallWrappers::GetClassIndex->Destroy();
+    CallWrappers::GetDefaultLoadoutSlot->Destroy();
+    CallWrappers::GetItem->Destroy();
+    CallWrappers::GetPlayerClass->Destroy();
+    CallWrappers::GetStaticData->Destroy();
+    CallWrappers::IsValid->Destroy();
 }
 
 void Freeguns::SDK_OnAllLoaded()
@@ -314,7 +322,7 @@ bool CallWrappers::InitCalls()
         //function takes no parameters, so params is not needed. ret could also be null if it returned void
         //proof:    https://github.com/alliedmodders/sourcemod/blob/92fb9f62ddc0ce63da8440f53edcba74fa3abe95/extensions/tf2/natives.cpp#L378
         //          https://github.com/ValveSoftware/source-sdk-2013/blob/68c8b82fdcb41b8ad5abde9fe1f0654254217b8e/src/game/server/player.cpp#L5277
-        GetClassIndex = g_pBinTools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
+        GetClassIndex = g_pBinTools->CreateCall();
         ASSERT_CALLER_INIT(GetClassIndex)
     }
     //CEconItemView* CTFDroppedWeapon::GetItem();
@@ -323,18 +331,18 @@ bool CallWrappers::InitCalls()
         const char* key = "CTFDroppedWeapon::GetItem";
         int offset;
         if (!GetVtableOffset(key, &offset)) return false;
-
+        
         PassInfo ret;
-
+        
         //returns a pointer
         ret.type = PassType_Basic;
         ret.flags = PASSFLAG_BYVAL;
         ret.size = sizeof(void*);
-
-        GetItem = g_pBinTools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
+        
+        GetClassIndex = g_pBinTools->CreateCall();
         ASSERT_CALLER_INIT(GetItem)
     }
-
+    
     // CTFPlayerClass* CTFPlayer::GetPlayerClass( void );
     if (!GetPlayerClass)
     {

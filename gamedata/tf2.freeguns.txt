@@ -35,6 +35,55 @@
 				"linux"		"@_ZN9CTFPlayer23GetEntityForLoadoutSlotEib"
 				"mac"		"@_ZN9CTFPlayer23GetEntityForLoadoutSlotEib"
 			}
+			"CTFPlayerClassShared::GetClassIndex"
+			{
+				"library"	"server"
+				"windows"	
+				"linux"		
+
+			}
+			"CTFDroppedWeapon::GetItem"
+			{
+				"library"	"server"
+				"windows"	
+				"linux"		
+
+			}
+			"CTFPlayer::GetPlayerClass"
+			{
+				"library"	"server"
+				"windows"	
+				"linux"		
+
+			}
+			"CTFItemDefinition::CanBeUsedByClass"
+			{
+				"library"	"server"
+				"windows"	
+				"linux"		
+
+			}
+			"CTFItemDefinition::GetDefaultLoadoutSlot"
+			{
+				"library"	"server"
+				"windows"	
+				"linux"		
+
+			}
+			"CEconItemView::IsValid"
+			{
+				"library"	"server"
+				"windows"	
+				"linux"		
+
+			}
+			"CEconItemView::GetStaticData"
+			{
+				"library"	"server"
+				"windows"	
+				"linux"		
+
+			}
 		}
 		"Offsets"
 		{

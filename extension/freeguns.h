@@ -31,27 +31,8 @@ class CTFDroppedWeapon
     // CEconItemView *GetItem();
 };
 
-class CTFPlayer
-{
-    
-    public:
-    bool CanPickupDroppedWeapon( const CTFDroppedWeapon *pWeapon );
-    bool PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
-    // CTFPlayerClass *GetPlayerClass( void );
-    
-};
 
-class CTFItemDefinition
-{
-    
-    public:
-    int GetLoadoutSlot( int iLoadoutClass ) const;
-    // int CanBeUsedByClass( int iClass ) const;
-    // int GetDefaultLoadoutSlot( void ) const;
 
-};
-
-typedef CTFItemDefinition	GameItemDefinition_t;
 
 class CEconItemView
 {
@@ -72,6 +53,7 @@ class CTFPlayer
     public:
     bool CanPickupDroppedWeapon( const CTFDroppedWeapon *pWeapon );
     bool PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
+    // CTFPlayerClass *GetPlayerClass( void );
     
 };
 
@@ -80,6 +62,8 @@ class CTFItemDefinition
     
     public:
     int GetLoadoutSlot( int iLoadoutClass ) const;
+    // int CanBeUsedByClass( int iClass ) const;
+    // int GetDefaultLoadoutSlot( void ) const;
 
 };
 
