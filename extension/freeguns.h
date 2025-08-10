@@ -2,13 +2,17 @@
 #define _INCLUDE_SOURCEMOD_EXTENSION_FREEGUNS_H_
 
 #include <safetyhook.hpp>
+#include <IBinTools.h>
 
 /*
  * Declarations for the Freeguns extension's functionality.
 */
 
 //Re-declarations from hl2sdk-tf2
-//this is all kinda messy, but I'm not sure the functions will bind to the originals otherwise
+
+/*
+ * FOR REFERENCE! //DEBUG
+*/
 
 class CEconItemView;    //hoist
 
@@ -59,6 +63,25 @@ class CEconItemView
 
 //okay were good
 
+class CTFDroppedWeapon;
+
+class CTFPlayer
+{
+    
+    public:
+    bool CanPickupDroppedWeapon( const CTFDroppedWeapon *pWeapon );
+    bool PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
+    
+};
+
+class CTFItemDefinition
+{
+    
+    public:
+    int GetLoadoutSlot( int iLoadoutClass ) const;
+
+};
+
 //Safetyhook hook/detour objects
 
 SafetyHookInline g_CanPickup_hook{};
@@ -85,13 +108,33 @@ public:
 
 };
 
-//Wrapper function to bind the detours
+
+//sdk calls
+
+class CallWrappers
+{
+    public:
+    static ICallWrapper *GetClassIndex;
+    static ICallWrapper *GetItem;
+    static ICallWrapper *GetPlayerClass;
+    static ICallWrapper *CanBeUsedByClass;
+    static ICallWrapper *GetDefaultLoadoutSlot;
+    static ICallWrapper *IsValid;
+    static ICallWrapper *GetStaticData;
+    
+    static bool InitCalls();
+};
+
+//functions to bind the detours
 
 bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback);
+
 
 //Other stuff needed
 
 IGameConfig *g_pGameConf = NULL;
+IBinTools *g_pBinTools = NULL;
+
 
 
 #endif // _INCLUDE_SOURCEMOD_EXTENSION_FREEGUNS_H_

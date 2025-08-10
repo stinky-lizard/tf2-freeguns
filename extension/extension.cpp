@@ -75,7 +75,11 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 		}
 		return false;
 	}
-    
+
+    //interfaces
+    sharesys->AddDependency(myself, "bintools.ext", true, true);
+
+
     //init and enable detours here
     
     if (!InitDetour("CTFPlayer::CanPickupDroppedWeapon", &g_CanPickup_hook, (void*)(&CTFPlayerDetours::detour_CanPickupDroppedWeapon))) return false;
@@ -238,7 +242,38 @@ void Freeguns::SDK_OnUnload()
 
 void Freeguns::SDK_OnAllLoaded()
 {
+    SM_GET_LATE_IFACE(BINTOOLS, g_pBinTools);
+
+    if (!g_pBinTools) return;
+
+    CallWrappers::InitCalls();
+    
+
     // sharesys->AddNatives(myself, MyNatives);
+}
+
+bool GetVtableOffset(const char* key, int* value)
+{
+    if (!g_pGameConf->GetOffset(key, value))
+    {
+        g_pSM->LogError(myself, "Could not get offset for %s!", key);
+        return false;
+    }
+    g_pSM->LogMessage(myself, "Retrieved offset for &s", key);              //DEBUG
+    return true;
+}
+
+bool CallWrappers::InitCalls()
+{
+    //getclassindex
+    if (!GetClassIndex)
+    {
+        int offset; 
+        if (!GetVtableOffset("CTFPlayerClassShared::GetClassIndex", &offset)) return true;
+
+        // GetClassIndex = g_pBinTools->CreateVCall(offset, 0, 0, );
+    }
+
 }
 
 /*

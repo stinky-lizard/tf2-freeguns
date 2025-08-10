@@ -11,12 +11,6 @@
 				"linux64"	"@_ZNK17CTFItemDefinition14GetLoadoutSlotEi"
 				"linux"		"@_ZNK17CTFItemDefinition14GetLoadoutSlotEi"
 			}
-			"CTFPlayer::TryToPickupDroppedWeapon"
-			{
-				"library"	"server"
-				"linux64"	"@_ZN9CTFPlayer24TryToPickupDroppedWeaponEv"
-				"linux"		"@_ZN9CTFPlayer24TryToPickupDroppedWeaponEv"
-			}
 			"CTFPlayer::CanPickupDroppedWeapon"
 			{
 				"library"	"server"
