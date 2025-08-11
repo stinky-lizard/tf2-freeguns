@@ -119,7 +119,9 @@ static bool weGood_CanPickup = false;
 
 bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon)
 {
-    g_pSM->LogMessage(myself, "---");              //DEBUG
+    g_pSM->LogMessage(myself, "-----------------------------------------");              //DEBUG
+    g_pSM->LogMessage(myself, "-----------------------------------------");              //DEBUG
+    g_pSM->LogMessage(myself, "-----------------------------------------");              //DEBUG
     g_pSM->LogMessage(myself, "Starting pickup process.");              //DEBUG
     g_pSM->LogMessage(myself, "DETOUR: PRE   CanPickup");               //DEBUG
     
@@ -142,7 +144,7 @@ bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWe
     //if GetLoadout ran, then all the checks passed, and we're good to pick up the weapon
     if (weGood_CanPickup)
     {
-        g_pSM->LogMessage(myself, "DETOUR: weGood true!");              //DEBUG
+        // g_pSM->LogMessage(myself, "DETOUR: weGood true!");              //DEBUG
         
         //reset for next time
         weGood_CanPickup = false;
@@ -151,6 +153,8 @@ bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWe
     else return out; //weGood_CanPickup is already false, no need to reset it
 }
 
+//TODO: for some reason this runs twice (four times for PickupWeapon). does it have to do with when and where it's initialized?
+//the others don't run twice...
 int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) const
 {
     //we've reached the GetLoadoutSlot call without returning, which means we've passed all the basic checks in CanPickup
@@ -158,64 +162,61 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) con
     //we also passed the check for if we have an active weapon, which I'm not completely sure if we need... but eh.
     //we dont care what this is doing. we'll overwrite its consequences in the canpickup detour anyways
     g_pSM->LogMessage(myself, "DETOUR: PRE   GetLoadout_CP");                //DEBUG
-    g_pSM->LogMessage(myself, "DETOUR: Setting weGood");                //DEBUG
+    // g_pSM->LogMessage(myself, "DETOUR: Setting weGood");                //DEBUG
     weGood_CanPickup = true;
     
     if (!g_GetLoadout_hook) g_pSM->LogMessage(myself, "DETOUR: Something's wrong...");                //DEBUG
     
-    return g_GetLoadout_hook.thiscall<int>(this, iLoadoutClass);
+    int out = g_GetLoadout_hook.thiscall<int>(this, iLoadoutClass);
+
+    g_GetLoadout_hook = {};
+    
+    return out; 
 }
 
-static int slotToPlaceItemIn_PickupWeapon = -1;
+//so we're not initializing this to -1. this is so we always have a way to pick up (and drop) at least something, even if getting the item def fails.
+//initialize to -1 to disallow picking up weapons without getting the slot it would go in.
+//it creates an error, but also stops the pickup process. i judge this to be the better way, even if it replaces the primary
+//remember to change 
+
+#define SLOTTOPLACEITEMIN_PW_DEFAULT -1
+static int slotToPlaceItemIn_PickupWeapon = SLOTTOPLACEITEMIN_PW_DEFAULT;
 
 bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWeapon)
 {
     g_pSM->LogMessage(myself, "DETOUR: PRE   PickupWeapon");            //DEBUG
     
-    //get the associated weapon
-    CEconItemView *pItem;
-
-    int unused;
-    GetEntProp(pDroppedWeapon, "m_Item", unused, true, pItem);
-
-    if (!pItem) 
-    {    
-        g_pSM->LogError(myself, "detour_PickupWeapon: pDroppedWeapon has no valid associated item!");   //DEBUG (only rets false in real game)
-        return false;
-    }
-
-    // //can we use this weapon without further effort? i.e. is this weapon meant for us?
-    // int myClass = GetPlayerClass()->GetClassIndex();
+    
+    // can we use this weapon without further effort? i.e. is this weapon meant for us?
     int myClass;
     GetEntProp(this, "m_iClass", myClass);
     g_pSM->LogMessage(myself, "myClass: %i", myClass);  //DEBUG
+        
+    // //if no, we'll have to get the slot the weapon normally goes in and use that instead
+    //get the default slot for this weapon (almost always the only slot, minus the shotgun, which will be a primary)
 
-    // bool canUseCurrentClass = pItem->GetStaticData()->CanBeUsedByClass(myClass);
+    // slotToPlaceItemIn_PickupWeapon = pItem->GetStaticData()->GetDefaultLoadoutSlot();
+
+    int itemDefIndex;
+    GetEntProp(pDroppedWeapon, "m_iItemDefinitionIndex", itemDefIndex);
+    g_pSM->LogMessage(myself, "itemDefIndex: %i", itemDefIndex);  //DEBUG
+
     
-    // //if yes, we can just call the original function and it'll all work out.
 
-    // //if no, we have to get the slot the weapon normally goes in and use that instead
-    // if (!canUseCurrentClass)
-    // {
-    //     //get the default slot for this weapon (almost always the only slot, minus the shotgun, which will be a primary)
-    //     slotToPlaceItemIn_PickupWeapon = pItem->GetStaticData()->GetDefaultLoadoutSlot();
+    //detour GetLoadoutSlot so we can replace the slot it says with our own
+    if (!InitDetour("CTFItemDefinition::GetLoadoutSlot", &g_GetLoadout_hook, (void*)(&CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon))) 
+        g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_PickupWeapon!");
 
-        //detour GetLoadoutSlot so we can replace the slot it says with our own
-        if (!InitDetour("CTFItemDefinition::GetLoadoutSlot", &g_GetLoadout_hook, (void*)(&CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon))) 
-            g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_PickupWeapon!");
-    // }
-
-    //call original function
+    //call original function 
     bool out = g_PickupWeapon_hook.thiscall<bool>(this, pDroppedWeapon);
     
     g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");            //DEBUG
 
-    bool canUseCurrentClass = false;
     //remove GetLoadoutSlot detour, dont need it anymore for now (not until the next pickup event)
-    if (!canUseCurrentClass) g_GetLoadout_hook = {};
+    g_GetLoadout_hook = {};
     
     //reset the slot var for next time
-    slotToPlaceItemIn_PickupWeapon = -1;
+    slotToPlaceItemIn_PickupWeapon = SLOTTOPLACEITEMIN_PW_DEFAULT;
 
     return out;
 }
@@ -225,19 +226,21 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
     g_pSM->LogMessage(myself, "DETOUR: PRE   GetLoadout_PW");                //DEBUG
     
     //first get the original result
-    //(i could skip this... but i want to be careful abt unforeseen consequences)
     bool out = g_GetLoadout_hook.thiscall<int>(this, iLoadoutClass);
     
-    //are we using our own slot?
+    // g_pSM->LogMessage(myself, "DETOUR: POST  GetLoadout_PW");                //DEBUG
+
+    g_pSM->LogMessage(myself, "out: %i", out);
+
+    //would we not be able to pick this up? 
     if (slotToPlaceItemIn_PickupWeapon != -1)
     {
-        //return that
         out = slotToPlaceItemIn_PickupWeapon;
         //reset it
-        slotToPlaceItemIn_PickupWeapon = -1;
+        slotToPlaceItemIn_PickupWeapon = SLOTTOPLACEITEMIN_PW_DEFAULT;
     }
 
-    g_pSM->LogMessage(myself, "DETOUR: POST  GetLoadout_PW");                //DEBUG
+    g_GetLoadout_hook = {};
 
     return out;
 }
