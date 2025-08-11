@@ -95,5 +95,31 @@ bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback)
 
 IGameConfig *g_pGameConf = NULL;
 
+    //copied from sdk-hacks.h, basehandle.h, and const.h
+
+#define	MAX_EDICT_BITS				11			// # of bits needed to represent max edicts     //hey this is the object limit! how about that
+
+#define NUM_SERIAL_NUM_BITS		16 // (32 - NUM_ENT_ENTRY_BITS)
+#define ENT_ENTRY_MASK			(( 1 << NUM_SERIAL_NUM_BITS) - 1)
+#define INVALID_EHANDLE_INDEX	0xFFFFFFFF
+#define NUM_ENT_ENTRY_BITS		(MAX_EDICT_BITS + 2)
+#define NUM_ENT_ENTRIES			(1 << NUM_ENT_ENTRY_BITS)
+
+class CBaseHandle
+{
+    //this is uh. commented out in dhooks but idk why.
+    //hopefully fine to uncomment
+public:
+	bool IsValid() const {return m_Index != INVALID_EHANDLE_INDEX;}
+	int GetEntryIndex() const
+	{
+		if ( !IsValid() )
+			return NUM_ENT_ENTRIES-1;
+		return m_Index & ENT_ENTRY_MASK;
+	}
+private:
+	unsigned long	m_Index;
+};
+
 
 #endif // _INCLUDE_SOURCEMOD_EXTENSION_FREEGUNS_H_

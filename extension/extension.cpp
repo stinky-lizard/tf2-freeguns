@@ -31,9 +31,12 @@
 
 #include "extension.h"
 #include "freeguns.h"
-#include <server_class.h>
+
 #include <string>
 #include <iostream>
+
+#include <server_class.h>
+
 using namespace std;
 
 /**
@@ -243,30 +246,9 @@ void Freeguns::SDK_OnAllLoaded()
     // sharesys->AddNatives(myself, MyNatives);
 }
 
-#define FIND_PROP_SEND(type, type_name) \
-	sm_sendprop_info_t info;\
-	SendProp *pProp; \
-	 \
-	if (pServerClass == nullptr) { \
-		pContext->ThrowNativeError("Failed to retrieve entity %d (%d) server class!", gamehelpers->ReferenceToIndex(params[1]), params[1]); \
-	} \
-	if (!g_HL2.FindSendPropInfo(pServerClass->GetName(), prop, &info)) \
-	{ \
-		const char *class_name = gamehelpers->GetEntityClassname(pEntity); \
-		return pContext->ThrowNativeError("Property \"%s\" not found (entity %d/%s)", \
-			prop, \
-			params[1], \
-			((class_name) ? class_name : "")); \
-	} \
-	\
-	offset = info.actual_offset; \
-	pProp = info.prop; \
-	bit_count = pProp->m_nBits; \
-
-
 
 // native int GetEntProp(int entity, PropType type, const char[] prop, int size=4, int element=0);
-static int GetEntProp(CBaseEntity* pEntity, const char* prop, int element = 0)
+static bool GetEntProp(CBaseEntity* pEntity, const char* prop, int& result, bool isEntity = false, void* entResult = NULL, int element = 0)
 {
     
 	int offset;
@@ -281,7 +263,10 @@ static int GetEntProp(CBaseEntity* pEntity, const char* prop, int element = 0)
     SendProp *pProp; 
 
     if (!pServerClass) 
+    {
         g_pSM->LogError(myself, "Failed to retrieve server class for %s!", prop);
+        return false;
+    }
 
     //get info about prop
     bool infoFound = gamehelpers->FindSendPropInfo(pServerClass->GetName(), prop, &info);
@@ -289,22 +274,43 @@ static int GetEntProp(CBaseEntity* pEntity, const char* prop, int element = 0)
     { 
         const char *class_name = gamehelpers->GetEntityClassname(pEntity); 
         g_pSM->LogError(myself,"Property \"%s\" not found (entity %s)", prop, class_name);
-        return; 
+        return false; 
     } 
 
     offset = info.actual_offset; 
+    g_pSM->LogMessage(myself, "offset: %i", offset);    //DEBUG
     pProp = info.prop; 
     bit_count = pProp->m_nBits;
+    g_pSM->LogMessage(myself, "bit_count: %i", bit_count);    //DEBUG
 
     //get if SPROP_UNSIGNED flag is set
     is_unsigned = ((pProp->GetFlags() & SPROP_UNSIGNED) == SPROP_UNSIGNED);
 
     
-    if (pProp->GetFlags() & SPROP_VARINT)
-    {
-        bit_count = sizeof(int) * 8;
-    }
+    // if (pProp->GetFlags() & SPROP_VARINT)
+    // {
+    //     bit_count = sizeof(int) * 8;
+    // }
 
+
+    if (isEntity)
+    {
+        CBaseHandle *hndl;
+        hndl = (CBaseHandle *)((uint8_t *)pEntity + offset);
+
+        CBaseEntity *pHandleEntity = gamehelpers->ReferenceToEntity(hndl->GetEntryIndex());
+
+        // if (!pHandleEntity || *hndl != reinterpret_cast<IHandleEntity *>(pHandleEntity)->GetRefEHandle())
+        if (!pHandleEntity)
+        {
+            g_pSM->LogError(myself, "GetEntProp isEntity check didn't pass");
+            return false;
+        }
+
+        entResult = pHandleEntity;
+        return true;
+
+    }
 
     //bleh
 	if (bit_count < 1)
@@ -313,28 +319,33 @@ static int GetEntProp(CBaseEntity* pEntity, const char* prop, int element = 0)
 	}
 	if (bit_count >= 17)
 	{
-		return *(int32_t *)((uint8_t *)pEntity + offset);
+		result = *(int32_t *)((uint8_t *)pEntity + offset);
+        return true;
 	}
 	else if (bit_count >= 9)
 	{
 		if (is_unsigned)
 		{
-			return *(uint16_t *)((uint8_t *)pEntity + offset);
+			result = *(uint16_t *)((uint8_t *)pEntity + offset);
+            return true;
 		}
 		else
 		{
-			return *(int16_t *)((uint8_t *)pEntity + offset);
+			result = *(int16_t *)((uint8_t *)pEntity + offset);
+            return true;
 		}
 	}
 	else if (bit_count >= 2)
 	{
 		if (is_unsigned)
 		{
-			return *(uint8_t *)((uint8_t *)pEntity + offset);
+			result = *(uint8_t *)((uint8_t *)pEntity + offset);
+            return true;
 		}
 		else
 		{
-			return *(int8_t *)((uint8_t *)pEntity + offset);
+			result = *(int8_t *)((uint8_t *)pEntity + offset);
+            return true;
 		}
 	}
 	else
