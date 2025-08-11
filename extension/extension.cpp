@@ -173,15 +173,23 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     g_pSM->LogMessage(myself, "DETOUR: PRE   PickupWeapon");            //DEBUG
     
     //get the associated weapon
-    // const CEconItemView *pItem = pDroppedWeapon->GetItem();
-    // if (!pItem || !pItem->IsValid()) 
-    // {    
-    //     g_pSM->LogError(myself, "detour_PickupWeapon: pDroppedWeapon has no valid associated item!");   //DEBUG (only rets false in real game)
-    //     return false;
-    // }
+    CEconItemView *pItem;
+
+    int unused;
+    GetEntProp(pDroppedWeapon, "m_Item", unused, true, pItem);
+
+    if (!pItem) 
+    {    
+        g_pSM->LogError(myself, "detour_PickupWeapon: pDroppedWeapon has no valid associated item!");   //DEBUG (only rets false in real game)
+        return false;
+    }
 
     // //can we use this weapon without further effort? i.e. is this weapon meant for us?
     // int myClass = GetPlayerClass()->GetClassIndex();
+    int myClass;
+    GetEntProp(this, "m_iClass", myClass);
+    g_pSM->LogMessage(myself, "myClass: %i", myClass);  //DEBUG
+
     // bool canUseCurrentClass = pItem->GetStaticData()->CanBeUsedByClass(myClass);
     
     // //if yes, we can just call the original function and it'll all work out.
@@ -248,7 +256,7 @@ void Freeguns::SDK_OnAllLoaded()
 
 
 // native int GetEntProp(int entity, PropType type, const char[] prop, int size=4, int element=0);
-static bool GetEntProp(CBaseEntity* pEntity, const char* prop, int& result, bool isEntity = false, void* entResult = NULL, int element = 0)
+static bool GetEntProp(void* pEntity, const char* prop, int& result, bool isEntity, void* entResult, int element)
 {
     
 	int offset;
@@ -257,7 +265,7 @@ static bool GetEntProp(CBaseEntity* pEntity, const char* prop, int& result, bool
     int bit_count;
 	bool is_unsigned = false;
         
-    ServerClass *pServerClass = gamehelpers->FindEntityServerClass(pEntity);
+    ServerClass *pServerClass = gamehelpers->FindEntityServerClass((CBaseEntity*)pEntity);
     
     sm_sendprop_info_t info; 
     SendProp *pProp; 
@@ -272,7 +280,7 @@ static bool GetEntProp(CBaseEntity* pEntity, const char* prop, int& result, bool
     bool infoFound = gamehelpers->FindSendPropInfo(pServerClass->GetName(), prop, &info);
     if (!infoFound) 
     { 
-        const char *class_name = gamehelpers->GetEntityClassname(pEntity); 
+        const char *class_name = gamehelpers->GetEntityClassname((CBaseEntity*)pEntity); 
         g_pSM->LogError(myself,"Property \"%s\" not found (entity %s)", prop, class_name);
         return false; 
     } 

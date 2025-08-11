@@ -91,11 +91,8 @@ public:
 
 bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback);
 
-//Other stuff needed
 
-IGameConfig *g_pGameConf = NULL;
-
-    //copied from sdk-hacks.h, basehandle.h, and const.h
+//copied from sdk-hacks.h, basehandle.h, and const.h
 
 #define	MAX_EDICT_BITS				11			// # of bits needed to represent max edicts     //hey this is the object limit! how about that
 
@@ -109,17 +106,21 @@ class CBaseHandle
 {
     //this is uh. commented out in dhooks but idk why.
     //hopefully fine to uncomment
-public:
+    public:
 	bool IsValid() const {return m_Index != INVALID_EHANDLE_INDEX;}
 	int GetEntryIndex() const
 	{
-		if ( !IsValid() )
-			return NUM_ENT_ENTRIES-1;
+        if ( !IsValid() )
+        return NUM_ENT_ENTRIES-1;
 		return m_Index & ENT_ENTRY_MASK;
 	}
-private:
+    private:
 	unsigned long	m_Index;
 };
 
+//Other stuff needed
+
+IGameConfig *g_pGameConf = NULL;
+static bool GetEntProp(void* pEntity, const char* prop, int& result, bool isEntity = false, void* entResult = NULL, int element = 0);
 
 #endif // _INCLUDE_SOURCEMOD_EXTENSION_FREEGUNS_H_
