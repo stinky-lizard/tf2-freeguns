@@ -2,50 +2,29 @@
 #define _INCLUDE_SOURCEMOD_EXTENSION_FREEGUNS_H_
 
 #include <safetyhook.hpp>
-#include <IBinTools.h>
-#include <sm_argbuffer.h>
 
 /*
  * Declarations for the Freeguns extension's functionality.
 */
 
 //Re-declarations from hl2sdk-tf2
-
-/*
- * FOR REFERENCE! //DEBUG
-*/
+//this is all kinda messy, but I'm not sure the functions will bind to the originals otherwise
 
 class CEconItemView;    //hoist
 
 class CTFPlayerClassShared
 {
-// public:
-//     int GetClassIndex( void ) const;
+public:
+    int GetClassIndex( void ) const;
 };
 
 class CTFPlayerClass : public CTFPlayerClassShared {};
 
 class CTFDroppedWeapon
 {
-    // public:
-    // CEconItemView *GetItem();
+    public:
+    CEconItemView *GetItem();
 };
-
-
-
-
-class CEconItemView
-{
-    // public:
-    // bool IsValid( void ) const;
-    // GameItemDefinition_t	*GetStaticData( void ) const;
-    
-    
-};
-
-//okay were good
-
-class CTFDroppedWeapon;
 
 class CTFPlayer
 {
@@ -53,7 +32,7 @@ class CTFPlayer
     public:
     bool CanPickupDroppedWeapon( const CTFDroppedWeapon *pWeapon );
     bool PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
-    // CTFPlayerClass *GetPlayerClass( void );
+    CTFPlayerClass *GetPlayerClass( void );
     
 };
 
@@ -62,10 +41,25 @@ class CTFItemDefinition
     
     public:
     int GetLoadoutSlot( int iLoadoutClass ) const;
-    // int CanBeUsedByClass( int iClass ) const;
-    // int GetDefaultLoadoutSlot( void ) const;
+    int CanBeUsedByClass( int iClass ) const;
+    int GetDefaultLoadoutSlot( void ) const;
 
 };
+
+typedef CTFItemDefinition	GameItemDefinition_t;
+
+class CEconItemView
+{
+    public:
+    bool IsValid( void ) const;
+    GameItemDefinition_t	*GetStaticData( void ) const;
+    
+    
+};
+
+class CBaseEntity;
+
+//okay were good
 
 //Safetyhook hook/detour objects
 
@@ -93,35 +87,13 @@ public:
 
 };
 
-
-//sdk calls
-
-class CallWrappers
-{
-    public:
-    static ICallWrapper *GetClassIndex;
-    static ICallWrapper *GetItem;
-    static ICallWrapper *GetPlayerClass;
-    static ICallWrapper *CanBeUsedByClass;
-    static ICallWrapper *GetDefaultLoadoutSlot;
-    static ICallWrapper *IsValid;
-    static ICallWrapper *GetStaticData;
-    
-    static bool InitCalls();
-
-    static bool wrappersInitialized;
-};
-
-//functions to bind the detours
+//Wrapper function to bind the detours
 
 bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback);
-
 
 //Other stuff needed
 
 IGameConfig *g_pGameConf = NULL;
-IBinTools *g_pBinTools = NULL;
-
 
 
 #endif // _INCLUDE_SOURCEMOD_EXTENSION_FREEGUNS_H_

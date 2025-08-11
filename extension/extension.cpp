@@ -31,6 +31,7 @@
 
 #include "extension.h"
 #include "freeguns.h"
+#include <server_class.h>
 #include <string>
 #include <iostream>
 using namespace std;
@@ -75,11 +76,7 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 		}
 		return false;
 	}
-
-    //interfaces
-    sharesys->AddDependency(myself, "bintools.ext", true, true);
-
-
+    
     //init and enable detours here
     
     if (!InitDetour("CTFPlayer::CanPickupDroppedWeapon", &g_CanPickup_hook, (void*)(&CTFPlayerDetours::detour_CanPickupDroppedWeapon))) return false;
@@ -174,62 +171,35 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     
     //get the associated weapon
     // const CEconItemView *pItem = pDroppedWeapon->GetItem();
-    CEconItemView *pItem;
-    ArgBuffer<void*> vstk1(pDroppedWeapon);
-    CallWrappers::GetItem->Execute(vstk1, &pItem);
-
     // if (!pItem || !pItem->IsValid()) 
-    bool IsPItemValid;
-    ArgBuffer<void*> vstk2(pItem);
-    CallWrappers::IsValid->Execute(vstk2, &IsPItemValid);
-    
-    if (!pItem || !IsPItemValid) 
-    {    
-        g_pSM->LogError(myself, "detour_PickupWeapon: pDroppedWeapon has no valid associated item!");   //DEBUG (only rets false in real game)
-        return false;
-    }
+    // {    
+    //     g_pSM->LogError(myself, "detour_PickupWeapon: pDroppedWeapon has no valid associated item!");   //DEBUG (only rets false in real game)
+    //     return false;
+    // }
 
-    //can we use this weapon without further effort? i.e. is this weapon meant for us?
-    // int myClassIndex = GetPlayerClass()->GetClassIndex();
-    CTFPlayerClass* myClass; 
-    ArgBuffer<void*> vstk3(this);
-    CallWrappers::GetPlayerClass->Execute(vstk3, &myClass);
-    
-    int myClassIndex;
-    ArgBuffer<void*> vstk4(myClass);
-    CallWrappers::GetClassIndex->Execute(vstk4, &myClassIndex);
-
-
+    // //can we use this weapon without further effort? i.e. is this weapon meant for us?
+    // int myClass = GetPlayerClass()->GetClassIndex();
     // bool canUseCurrentClass = pItem->GetStaticData()->CanBeUsedByClass(myClass);
-    CTFItemDefinition *pItemStaticData;
-    ArgBuffer<void*> vstk5(pItem);
-    CallWrappers::GetStaticData->Execute(vstk5, &pItemStaticData);
     
-    bool canUseCurrentClass;
-    ArgBuffer<void*, int> vstk6(pItemStaticData, myClassIndex);
-    CallWrappers::CanBeUsedByClass->Execute(vstk6, &canUseCurrentClass);
+    // //if yes, we can just call the original function and it'll all work out.
 
-
-    //if yes, we can just call the original function and it'll all work out.
-
-    //if no, we have to get the slot the weapon normally goes in and use that instead
-    if (!canUseCurrentClass)
-    {
-        //get the default slot for this weapon (almost always the only slot, minus the shotgun, which will be a primary)
-        // slotToPlaceItemIn_PickupWeapon = pItem->GetStaticData()->GetDefaultLoadoutSlot();
-        ArgBuffer<void*> vstk7(pItemStaticData);
-        CallWrappers::GetDefaultLoadoutSlot->Execute(vstk7, &slotToPlaceItemIn_PickupWeapon);
+    // //if no, we have to get the slot the weapon normally goes in and use that instead
+    // if (!canUseCurrentClass)
+    // {
+    //     //get the default slot for this weapon (almost always the only slot, minus the shotgun, which will be a primary)
+    //     slotToPlaceItemIn_PickupWeapon = pItem->GetStaticData()->GetDefaultLoadoutSlot();
 
         //detour GetLoadoutSlot so we can replace the slot it says with our own
         if (!InitDetour("CTFItemDefinition::GetLoadoutSlot", &g_GetLoadout_hook, (void*)(&CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon))) 
             g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_PickupWeapon!");
-    }
+    // }
 
     //call original function
     bool out = g_PickupWeapon_hook.thiscall<bool>(this, pDroppedWeapon);
     
     g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");            //DEBUG
 
+    bool canUseCurrentClass = false;
     //remove GetLoadoutSlot detour, dont need it anymore for now (not until the next pickup event)
     if (!canUseCurrentClass) g_GetLoadout_hook = {};
     
@@ -266,183 +236,115 @@ void Freeguns::SDK_OnUnload()
     g_CanPickup_hook = {};
     g_PickupWeapon_hook = {};
     g_GetLoadout_hook = {};
-
-    //destroy callers
-    CallWrappers::wrappersInitialized = false;
-    CallWrappers::CanBeUsedByClass->Destroy();
-    CallWrappers::GetClassIndex->Destroy();
-    CallWrappers::GetDefaultLoadoutSlot->Destroy();
-    CallWrappers::GetItem->Destroy();
-    CallWrappers::GetPlayerClass->Destroy();
-    CallWrappers::GetStaticData->Destroy();
-    CallWrappers::IsValid->Destroy();
 }
 
 void Freeguns::SDK_OnAllLoaded()
 {
-    SM_GET_LATE_IFACE(BINTOOLS, g_pBinTools);
-
-    if (!g_pBinTools) return;
-
-    if (CallWrappers::InitCalls()) CallWrappers::wrappersInitialized = true;
-    else CallWrappers::wrappersInitialized = false;
-    
-
     // sharesys->AddNatives(myself, MyNatives);
 }
 
-bool GetVtableOffset(const char* key, int* value)
+#define FIND_PROP_SEND(type, type_name) \
+	sm_sendprop_info_t info;\
+	SendProp *pProp; \
+	 \
+	if (pServerClass == nullptr) { \
+		pContext->ThrowNativeError("Failed to retrieve entity %d (%d) server class!", gamehelpers->ReferenceToIndex(params[1]), params[1]); \
+	} \
+	if (!g_HL2.FindSendPropInfo(pServerClass->GetName(), prop, &info)) \
+	{ \
+		const char *class_name = gamehelpers->GetEntityClassname(pEntity); \
+		return pContext->ThrowNativeError("Property \"%s\" not found (entity %d/%s)", \
+			prop, \
+			params[1], \
+			((class_name) ? class_name : "")); \
+	} \
+	\
+	offset = info.actual_offset; \
+	pProp = info.prop; \
+	bit_count = pProp->m_nBits; \
+
+
+
+// native int GetEntProp(int entity, PropType type, const char[] prop, int size=4, int element=0);
+static int GetEntProp(CBaseEntity* pEntity, const char* prop, int element = 0)
 {
-    if (!g_pGameConf->GetOffset(key, value))
-    {
-        g_pSM->LogError(myself, "Could not get offset for %s!", key);
-        return false;
-    }
-    g_pSM->LogMessage(myself, "Retrieved offset for &s", key);              //DEBUG
-    return true;
-}
-
-#define ASSERT_CALLER_INIT(caller) if(!caller) { g_pSM->LogError(myself, "Failed to initialize SDK call for %s!", key); return false; }
-
-bool CallWrappers::InitCalls()
-{
-    //int CTFPlayerClassShared::GetClassIndex( void ) const;
-    if (!GetClassIndex)
-    {
-        const char* key = "CTFPlayerClassShared::GetClassIndex";
-        int offset; 
-        if (!GetVtableOffset(key, &offset)) return false;
-
-        PassInfo ret;
-
-        ret.type = PassType_Basic;
-        ret.flags = PASSFLAG_BYVAL;
-        ret.size = sizeof(int);
-
-        //function takes no parameters, so params is not needed. ret could also be null if it returned void
-        //proof:    https://github.com/alliedmodders/sourcemod/blob/92fb9f62ddc0ce63da8440f53edcba74fa3abe95/extensions/tf2/natives.cpp#L378
-        //          https://github.com/ValveSoftware/source-sdk-2013/blob/68c8b82fdcb41b8ad5abde9fe1f0654254217b8e/src/game/server/player.cpp#L5277
-        GetClassIndex = g_pBinTools->CreateCall();
-        ASSERT_CALLER_INIT(GetClassIndex)
-    }
-    //CEconItemView* CTFDroppedWeapon::GetItem();
-    if (!GetItem)
-    {
-        const char* key = "CTFDroppedWeapon::GetItem";
-        int offset;
-        if (!GetVtableOffset(key, &offset)) return false;
-        
-        PassInfo ret;
-        
-        //returns a pointer
-        ret.type = PassType_Basic;
-        ret.flags = PASSFLAG_BYVAL;
-        ret.size = sizeof(void*);
-        
-        GetClassIndex = g_pBinTools->CreateCall();
-        ASSERT_CALLER_INIT(GetItem)
-    }
     
-    // CTFPlayerClass* CTFPlayer::GetPlayerClass( void );
-    if (!GetPlayerClass)
-    {
-        const char* key = "CTFPlayer::GetPlayerClass";
-        int offset;
-        if (!GetVtableOffset(key, &offset)) return false;
+	int offset;
+    int size = 4;
 
-        PassInfo ret;
-
-        ret.type = PassType_Basic;
-        ret.flags = PASSFLAG_BYVAL;
-        ret.size = sizeof(void*);
-
-        GetPlayerClass = g_pBinTools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
-        ASSERT_CALLER_INIT(GetPlayerClass)
-    }
-
-    // int CTFItemDefinition::CanBeUsedByClass( int iClass ) const;
-    if (!CanBeUsedByClass)
-    {
-        const char* key = "CTFItemDefinition::CanBeUsedByClass";
-        int offset;
-        if (!GetVtableOffset(key, &offset)) return false;
-
-        PassInfo ret, params[1];
+    int bit_count;
+	bool is_unsigned = false;
         
-        ret.type = PassType_Basic;
-        ret.flags = PASSFLAG_BYVAL;
-        ret.size = sizeof(int);
+    ServerClass *pServerClass = gamehelpers->FindEntityServerClass(pEntity);
+    
+    sm_sendprop_info_t info; 
+    SendProp *pProp; 
 
-        params[0].type = PassType_Basic;
-        params[0].flags = PASSFLAG_BYVAL;
-        params[0].size = sizeof(int);
+    if (!pServerClass) 
+        g_pSM->LogError(myself, "Failed to retrieve server class for %s!", prop);
 
-        CanBeUsedByClass = g_pBinTools->CreateVCall(offset, 0, 0, &ret, params, 1);
-        ASSERT_CALLER_INIT(CanBeUsedByClass)
-    }
+    //get info about prop
+    bool infoFound = gamehelpers->FindSendPropInfo(pServerClass->GetName(), prop, &info);
+    if (!infoFound) 
+    { 
+        const char *class_name = gamehelpers->GetEntityClassname(pEntity); 
+        g_pSM->LogError(myself,"Property \"%s\" not found (entity %s)", prop, class_name);
+        return; 
+    } 
 
-    // int CTFItemDefinition::GetDefaultLoadoutSlot( void ) const;
-    if (!GetDefaultLoadoutSlot)
+    offset = info.actual_offset; 
+    pProp = info.prop; 
+    bit_count = pProp->m_nBits;
+
+    //get if SPROP_UNSIGNED flag is set
+    is_unsigned = ((pProp->GetFlags() & SPROP_UNSIGNED) == SPROP_UNSIGNED);
+
+    
+    if (pProp->GetFlags() & SPROP_VARINT)
     {
-        const char* key = "CTFItemDefinition::GetDefaultLoadoutSlot";
-        int offset;
-        if (!GetVtableOffset(key, &offset)) return false;
-
-        PassInfo ret;
-
-        ret.type = PassType_Basic;
-        ret.flags = PASSFLAG_BYVAL;
-        ret.size = sizeof(int);
-
-        GetDefaultLoadoutSlot = g_pBinTools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
-        ASSERT_CALLER_INIT(GetDefaultLoadoutSlot)
-    }
-
-    // bool CEconItemView::IsValid( void ) const;
-    if(!IsValid)
-    {
-        const char* key = "CEconItemView::IsValid";
-        int offset;
-        if (!GetVtableOffset(key, &offset)) return false;
-
-        PassInfo ret;
-
-        ret.type = PassType_Basic;
-        ret.flags = PASSFLAG_BYVAL;
-        ret.size = sizeof(bool);
-
-        IsValid = g_pBinTools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
-        ASSERT_CALLER_INIT(IsValid)
-    }
-
-    // GameItemDefinition_t* CEconItemView::GetStaticData( void ) const;
-    if (!GetStaticData)
-    {
-        const char* key = "CEconItemView::GetStaticData";
-        int offset;
-        if (!GetVtableOffset(key, &offset)) return false;
-
-        PassInfo ret;
-
-        ret.type = PassType_Basic;
-        ret.flags = PASSFLAG_BYVAL;
-        ret.size = sizeof(void*);
-
-        GetStaticData = g_pBinTools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
-        ASSERT_CALLER_INIT(GetStaticData)
+        bit_count = sizeof(int) * 8;
     }
 
 
-    return true;
+    //bleh
+	if (bit_count < 1)
+	{
+		bit_count = size * 8;
+	}
+	if (bit_count >= 17)
+	{
+		return *(int32_t *)((uint8_t *)pEntity + offset);
+	}
+	else if (bit_count >= 9)
+	{
+		if (is_unsigned)
+		{
+			return *(uint16_t *)((uint8_t *)pEntity + offset);
+		}
+		else
+		{
+			return *(int16_t *)((uint8_t *)pEntity + offset);
+		}
+	}
+	else if (bit_count >= 2)
+	{
+		if (is_unsigned)
+		{
+			return *(uint8_t *)((uint8_t *)pEntity + offset);
+		}
+		else
+		{
+			return *(int8_t *)((uint8_t *)pEntity + offset);
+		}
+	}
+	else
+	{
+		return *(bool *)((uint8_t *)pEntity + offset) ? 1 : 0;
+	}
 
+	return 0;
 }
 
-bool Freeguns::QueryRunning(char *error, size_t maxlength)
-{
-    SM_CHECK_IFACE(BINTOOLS, g_pBinTools);
-
-    return CallWrappers::wrappersInitialized;
-}
 
 /*
     Native Definitions
