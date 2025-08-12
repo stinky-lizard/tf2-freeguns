@@ -174,12 +174,6 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) con
     return out; 
 }
 
-//so we're not initializing this to -1. this is so we always have a way to pick up (and drop) at least something, even if getting the item def fails.
-//initialize to -1 to disallow picking up weapons without getting the slot it would go in.
-//it creates an error, but also stops the pickup process. i judge this to be the better way, even if it replaces the primary
-
-#define SLOTTOPLACEITEMIN_PW_DEFAULT 0
-static int slotToPlaceItemIn_PickupWeapon = SLOTTOPLACEITEMIN_PW_DEFAULT;
 
 bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWeapon)
 {
@@ -188,58 +182,94 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     
     // can we use this weapon without further effort? i.e. is this weapon meant for us?
     //nevermind, GetLoadoutSlot on the dropped weapon will return a nonnegative number if we can pick it up, or -1 if we can't. No need to check ourselves.
+    // bool canUseCurrentClass = pItem->GetStaticData()->CanBeUsedByClass(myClass); //this code would be based on this, but ofc, no need
     
-    int itemDefIndex;
-    GetEntProp(pDroppedWeapon, "m_iItemDefinitionIndex", itemDefIndex);
-    // g_pSM->LogMessage(myself, "itemDefIndex: %i", itemDefIndex);  //DEBUG
-
-
-
     // //if no, we'll have to get the slot the weapon normally goes in and use that instead
     //get the default slot for this weapon (almost always the only slot, minus the shotgun, which will be a primary)
-
     // slotToPlaceItemIn_PickupWeapon = pItem->GetStaticData()->GetDefaultLoadoutSlot();
-
+    
+    //NEVERMIND! i realized we can just call GetLoadoutSlot on every class.
+    //Whichever one returns a nonnegative number will be the class we want and the slot it goes in.
+    //This is an alternative to:
+    // - Getting the item definition index from the SendProps
+    // - Calling GetItemSchema() (or GEconItemSchema()?)
+    // - Calling CEconItemSchema::GetItemDefinition() with our index
+    // - Adding a magic number that's the offset from the start of the item def object to where the default loadout slot is held in memory
+    
+    //... That might, *might*, be more proper, but this way is CERTAINLY easier. Not sure if it uses more processing time though...
+    // Calling GetLoadoutSlot(), a relatively small function, up to 9 times, or creating(?) an item schema object... hmm...
+    // either way I'm doing the easier way. At least for now.
+    
+    // // start of original way here:
+    // int itemDefIndex;
+    // GetEntProp(pDroppedWeapon, "m_iItemDefinitionIndex", itemDefIndex);
+    // // g_pSM->LogMessage(myself, "itemDefIndex: %i", itemDefIndex);  //DEBUG
+    
     //detour GetLoadoutSlot so we can replace the slot it says with our own
     if (!InitDetour("CTFItemDefinition::GetLoadoutSlot", &g_GetLoadout_hook, (void*)(&CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon))) 
-        g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_PickupWeapon!");
-
-    //call original function 
+    g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_PickupWeapon!");
+    
+    //actually pick up the weapon and drop ours
     bool out = g_PickupWeapon_hook.thiscall<bool>(this, pDroppedWeapon);
     
     g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");            //DEBUG
-
+    
     //remove GetLoadoutSlot detour, dont need it anymore for now (not until the next pickup event)
     g_GetLoadout_hook = {};
     
-    //reset the slot var for next time
-    slotToPlaceItemIn_PickupWeapon = SLOTTOPLACEITEMIN_PW_DEFAULT;
-
     return out;
 }
+
+// So we could default this to -1, or 0. defaulting to 0 would cause us to drop our primary, but we would still pick up the weapon.
+// Would work if we picked up a primary, but a secondary would cause us to just not have a primary and then stuff would get weird.
+// Defaulting to -1 would cause GetEntityForLoadoutSlot to not find anything, and return nothing.
+// That would cause PickupWeapon to return false in the pre-pickup if ( !pWeapon ) check.
+// (or if we skip that, it would pick up the weapon, but not drop our original one, since it didnt find it, and not drop our weapon after if ( pWeapon ))
+
+#define SLOTTODROP_PW_DEFAULT -1
 
 int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) const
 {
     g_pSM->LogMessage(myself, "DETOUR: PRE   GetLoadout_PW");                //DEBUG
+    
+    int slotToDrop_PickupWeapon = SLOTTODROP_PW_DEFAULT;
     
     //first get the original result
     int out = g_GetLoadout_hook.thiscall<int>(this, iLoadoutClass);
     
     // g_pSM->LogMessage(myself, "DETOUR: POST  GetLoadout_PW");                //DEBUG
 
-    g_pSM->LogMessage(myself, "out (me):    %i", out);                              //DEBUG
-    g_pSM->LogMessage(myself, "slotToPlace: %i", slotToPlaceItemIn_PickupWeapon);   //DEBUG
-
+    g_pSM->LogMessage(myself, "out (me):    %i", out);                       //DEBUG
+    
     //would we not be able to pick this up? 
     if (out == -1)
     {
-        out = slotToPlaceItemIn_PickupWeapon;
+        // get the loadout slot that this weapon would normally go in
+        // ... by checking every class until one of them returns something other than -1
+        
+        //from 0-9 the classes are: Undefined, Scout, Sniper, Soldier, Demo, Medic, Heavy, Pyro, Spy, Engineer
+        for (int i = 1; i++; i <= 9)
+        {
+            int slotForThisClass = g_GetLoadout_hook.thiscall<int>(this, i);
+
+            g_pSM->LogMessage(myself, "Slot for class %i: %i", i, slotForThisClass);    //DEBUG
+
+            if (slotForThisClass != -1)
+            {
+                //the weapon is meant for this class!
+                slotToDrop_PickupWeapon = slotForThisClass;
+            }
+            // otherwise move on to the next
+        }
+        g_pSM->LogMessage(myself, "slotToPlace: %i", slotToDrop_PickupWeapon);   //DEBUG
+        
+        out = slotToDrop_PickupWeapon;
         //reset it
-        slotToPlaceItemIn_PickupWeapon = SLOTTOPLACEITEMIN_PW_DEFAULT;
+        slotToDrop_PickupWeapon = SLOTTODROP_PW_DEFAULT;
     }
-
+    
     g_GetLoadout_hook = {};
-
+    
     return out;
 }
 
@@ -296,6 +326,7 @@ static bool GetEntProp(void* pEntity, const char* prop, int& result, bool isEnti
     is_unsigned = ((pProp->GetFlags() & SPROP_UNSIGNED) == SPROP_UNSIGNED);
 
     
+    // unsure what SPROP_VARINT is... cant find what it means or where its declared/defined
     // if (pProp->GetFlags() & SPROP_VARINT)
     // {
     //     bit_count = sizeof(int) * 8;
