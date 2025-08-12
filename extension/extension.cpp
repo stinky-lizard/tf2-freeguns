@@ -237,7 +237,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
     
     // g_pSM->LogMessage(myself, "DETOUR: POST  GetLoadout_PW");                //DEBUG
 
-    g_pSM->LogMessage(myself, "out (me):          %i", out);                       //DEBUG
+    g_pSM->LogMessage(myself, "out (me):         %i", out);                       //DEBUG
     
     //would we not be able to pick this up? 
     if (out == -1)
@@ -256,10 +256,11 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
             {
                 //the weapon is meant for this class!
                 slotToDrop_PickupWeapon = slotForThisClass;
+                break;
             }
             // otherwise move on to the next
         }
-        g_pSM->LogMessage(myself, "slotToPlace:       %i", slotToDrop_PickupWeapon);   //DEBUG
+        g_pSM->LogMessage(myself, "slotToPlace:      %i", slotToDrop_PickupWeapon);   //DEBUG
         
         out = slotToDrop_PickupWeapon;
         //reset it
