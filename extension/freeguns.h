@@ -54,7 +54,6 @@ class CTFItemDefinition
 
 };
 
-
 // typedef CTFItemDefinition	GameItemDefinition_t;
 
 
@@ -77,6 +76,7 @@ SafetyHookInline g_PickupWeapon_hook{};
 SafetyHookInline g_GetLoadout_hook{};
 SafetyHookInline g_WeaponGetSlot_hook{};
 SafetyHookInline g_GetEnt_hook{};
+SafetyHookInline g_Translate_hook{};
 
 //Detour functions to bind to the objects
 
@@ -89,6 +89,7 @@ public:
     CBaseEntity* detour_GetEntityForLoadoutSlot( int iLoadoutSlot, bool bForceCheckWearable = false );	
     
 };
+static bool getEntDetourEnabled = false;
 
 class CTFItemDefDetours : CTFItemDefinition
 {
@@ -104,6 +105,9 @@ class CBaseCmbtChrDetours : CBaseCombatCharacter
 public:
     CBaseCombatWeapon* detour_Weapon_GetSlot( int slot ) const;
 };
+
+extern const char* detour_TranslateWeaponEntForClass( const char *pszName, int iClass );
+static bool translateDetourEnabled = false;
 
 //Wrapper function to bind the detours
 

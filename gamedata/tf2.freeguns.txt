@@ -41,6 +41,12 @@
 				"linux64"	"@_ZNK20CBaseCombatCharacter14Weapon_GetSlotEi"
 				"linux"		"@_ZNK20CBaseCombatCharacter14Weapon_GetSlotEi"
 			}
+			"TranslateWeaponEntForClass"
+			{
+				"library"	"server"
+				"linux64"	"@_Z26TranslateWeaponEntForClassPKci"
+				"linux"		"@_Z26TranslateWeaponEntForClassPKci"
+			}
 		}
 		"Offsets"
 		{

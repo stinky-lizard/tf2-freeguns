@@ -86,6 +86,10 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 
     if (!InitDetour("CBaseCombatCharacter::Weapon_GetSlot", &g_WeaponGetSlot_hook, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot))) return false;
     
+    if (!InitDetour("CTFPlayer::GetEntityForLoadoutSlot", &g_GetEnt_hook, (void*)(&CTFPlayerDetours::detour_GetEntityForLoadoutSlot))) return false;
+    
+    if (!InitDetour("TranslateWeaponEntForClass", &g_Translate_hook, (void*)(&detour_TranslateWeaponEntForClass))) return false;
+    
     return true;
 }
 
@@ -208,12 +212,13 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     
     //detour GetLoadoutSlot so we can replace the slot it says with our own
     if (!InitDetour("CTFItemDefinition::GetLoadoutSlot", &g_GetLoadout_hook, (void*)(&CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon))) 
-    g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_PickupWeapon!");
+        g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_PickupWeapon!");
     
     //detour GetEntityForLoadoutSlot so we can drop another class's weapon and Weapon_GetSlot to get that weapon
-    if (!InitDetour("CTFPlayer::GetEntityForLoadoutSlot", &g_GetEnt_hook, (void*)(&CTFPlayerDetours::detour_GetEntityForLoadoutSlot)))
-    g_pSM->LogError(myself, "Could not initialize detour_GetEntityForLoadoutSlot!");
-    
+    getEntDetourEnabled = true;
+
+    //don't translate the weapon - fixes some weapons not being pickuppable on unintended classes
+    translateDetourEnabled = true;
     
     //actually pick up the weapon and drop ours
     bool out = g_PickupWeapon_hook.thiscall<bool>(this, pDroppedWeapon);
@@ -222,9 +227,23 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     
     //remove GetLoadoutSlot detour, dont need it anymore for now (not until the next pickup event)
     g_GetLoadout_hook = {};
-    g_GetEnt_hook = {};
+    
+    getEntDetourEnabled = false;
+    translateDetourEnabled = false;
     
     return out;
+}
+
+//don't translate our weapons
+const char* detour_TranslateWeaponEntForClass( const char *pszName, int iClass )
+{
+    // if (translateDetourEnabled)
+    if (false)  //DEBUG
+    {
+        translateDetourEnabled = false;
+        return pszName;
+    }
+    return g_Translate_hook.call<const char*>(pszName, iClass);
 }
 
 CBaseCombatWeapon* CBaseCmbtChrDetours::detour_Weapon_GetSlot( int slot ) const
@@ -236,10 +255,10 @@ CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot,
 {
     CBaseEntity* out = g_GetEnt_hook.thiscall<CBaseEntity*>(this, iLoadoutSlot, bForceCheckWearable);
     
-    if (!out)
+    if (getEntDetourEnabled && !out)
     {
         g_pSM->LogMessage(myself, "GetEnt failed, falling back to WeaponGetSlot..."); //DEBUG
-
+        
         //it didn't find anything, probably because the slot is filled by another class' weapon.
         out = (CBaseEntity*) g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, iLoadoutSlot);
         if (!out)
@@ -249,6 +268,9 @@ CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot,
             g_pSM->LogMessage(myself, "Weapon_GetSlot failed to find weapon!"); //DEBUG
         }
     }
+
+    getEntDetourEnabled = false;
+
     return out;
 }
 
@@ -313,6 +335,9 @@ void Freeguns::SDK_OnUnload()
     g_PickupWeapon_hook = {};
     g_GetLoadout_hook = {};
     g_WeaponGetSlot_hook = {};
+    g_Translate_hook = {};
+    g_GetEnt_hook = {};
+
 }
 
 void Freeguns::SDK_OnAllLoaded()
