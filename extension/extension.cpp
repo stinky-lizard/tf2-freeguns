@@ -83,6 +83,8 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     if (!InitDetour("CTFPlayer::CanPickupDroppedWeapon", &g_CanPickup_hook, (void*)(&CTFPlayerDetours::detour_CanPickupDroppedWeapon))) return false;
     
     if (!InitDetour("CTFPlayer::PickupWeaponFromOther", &g_PickupWeapon_hook, (void*)(&CTFPlayerDetours::detour_PickupWeaponFromOther))) return false;
+
+    if (!InitDetour("CBaseCombatCharacter::Weapon_GetSlot", &g_WeaponGetSlot_hook, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot))) return false;
     
     return true;
 }
@@ -104,7 +106,7 @@ bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback)
 		g_pSM->LogError(myself, "Sigscan for %s failed", gamedata);
 		return false;
 	}
-    g_pSM->LogMessage(myself, "Got sig for %s", gamedata);               //DEBUG
+    // g_pSM->LogMessage(myself, "Got sig for %s", gamedata);               //DEBUG
     
     *hookObj = safetyhook::create_inline(pAddress, callback);
 
@@ -159,7 +161,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) con
     //(is alive, isn't taunting, etc.)
     //we also passed the check for if we have an active weapon, which I'm not completely sure if we need... but eh.
     //we dont care what this is doing. we'll overwrite its consequences in the canpickup detour anyways
-    g_pSM->LogMessage(myself, "DETOUR: PRE   GetLoadout_CP");                //DEBUG
+    // g_pSM->LogMessage(myself, "DETOUR: PRE   GetLoadout_CP");                //DEBUG
     // g_pSM->LogMessage(myself, "DETOUR: Setting weGood");                //DEBUG
     weGood_CanPickup = true;
     
@@ -172,15 +174,11 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) con
     return out; 
 }
 
-CBaseCombatWeapon* CBaseCmbtChrDetours::detour_Weapon_GetSlot( int slot ) const
-{
-    return g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, slot);
-}
 
 
 bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWeapon)
 {
-    g_pSM->LogMessage(myself, "DETOUR: PRE   PickupWeapon");            //DEBUG
+    // g_pSM->LogMessage(myself, "DETOUR: PRE   PickupWeapon");            //DEBUG
     
     
     // can we use this weapon without further effort? i.e. is this weapon meant for us?
@@ -210,32 +208,47 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     
     //detour GetLoadoutSlot so we can replace the slot it says with our own
     if (!InitDetour("CTFItemDefinition::GetLoadoutSlot", &g_GetLoadout_hook, (void*)(&CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon))) 
-        g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_PickupWeapon!");
-
+    g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_PickupWeapon!");
     
-    //woof
-    int vtableOffset;
-    g_pGameConf->GetOffset("CBaseCombatCharacter::Weapon_GetSlot", &vtableOffset);
-
-    int* vtableBasePointer = (int*)((int*)this)[0];
-    void* Weapon_GetSlotPointer = (void*)vtableBasePointer[vtableOffset];
-
-    g_WeaponGetSlot_hook = safetyhook::create_inline(Weapon_GetSlotPointer, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot));
-    
-    
+    //detour GetEntityForLoadoutSlot so we can drop another class's weapon and Weapon_GetSlot to get that weapon
     if (!InitDetour("CTFPlayer::GetEntityForLoadoutSlot", &g_GetEnt_hook, (void*)(&CTFPlayerDetours::detour_GetEntityForLoadoutSlot)))
-        g_pSM->LogError(myself, "Could not initialize detour_GetEntityForLoadoutSlot!");
-
+    g_pSM->LogError(myself, "Could not initialize detour_GetEntityForLoadoutSlot!");
+    
     
     //actually pick up the weapon and drop ours
     bool out = g_PickupWeapon_hook.thiscall<bool>(this, pDroppedWeapon);
     
-    g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");            //DEBUG
+    // g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");            //DEBUG
     
     //remove GetLoadoutSlot detour, dont need it anymore for now (not until the next pickup event)
     g_GetLoadout_hook = {};
-    g_WeaponGetSlot_hook = {};
+    g_GetEnt_hook = {};
     
+    return out;
+}
+
+CBaseCombatWeapon* CBaseCmbtChrDetours::detour_Weapon_GetSlot( int slot ) const
+{
+    return g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, slot);
+}
+
+CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot, bool bForceCheckWearable)
+{
+    CBaseEntity* out = g_GetEnt_hook.thiscall<CBaseEntity*>(this, iLoadoutSlot, bForceCheckWearable);
+    
+    if (!out)
+    {
+        g_pSM->LogMessage(myself, "GetEnt failed, falling back to WeaponGetSlot..."); //DEBUG
+
+        //it didn't find anything, probably because the slot is filled by another class' weapon.
+        out = (CBaseEntity*) g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, iLoadoutSlot);
+        if (!out)
+        {
+            //uh oh
+            //... or we're picking up a weapon into a slot that isn't filled
+            g_pSM->LogMessage(myself, "Weapon_GetSlot failed to find weapon!"); //DEBUG
+        }
+    }
     return out;
 }
 
@@ -250,7 +263,7 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
 
 int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) const
 {
-    g_pSM->LogMessage(myself, "DETOUR: PRE   GetLoadout_PW");                //DEBUG
+    // g_pSM->LogMessage(myself, "DETOUR: PRE   GetLoadout_PW");                //DEBUG
     
     int slotToDrop_PickupWeapon = SLOTTODROP_PW_DEFAULT;
     
@@ -258,7 +271,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
     int out = g_GetLoadout_hook.thiscall<int>(this, iLoadoutClass);
     
     // g_pSM->LogMessage(myself, "DETOUR: POST  GetLoadout_PW");                //DEBUG
-
+    
     g_pSM->LogMessage(myself, "out (me):         %i", out);                       //DEBUG
     
     //would we not be able to pick this up? 
@@ -271,9 +284,9 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
         for (int i = 1; i <= 9; i++)
         {
             int slotForThisClass = g_GetLoadout_hook.thiscall<int>(this, i);
-
+            
             g_pSM->LogMessage(myself, "Slot for class %i: %i", i, slotForThisClass);    //DEBUG
-
+            
             if (slotForThisClass != -1)
             {
                 //the weapon is meant for this class!
@@ -299,6 +312,7 @@ void Freeguns::SDK_OnUnload()
     g_CanPickup_hook = {};
     g_PickupWeapon_hook = {};
     g_GetLoadout_hook = {};
+    g_WeaponGetSlot_hook = {};
 }
 
 void Freeguns::SDK_OnAllLoaded()
@@ -308,7 +322,7 @@ void Freeguns::SDK_OnAllLoaded()
 
 
 /*
-    Native Definitions
+Native Definitions
 */
 
 // cell_t ReferenceFunc(IPluginContext *pContext, const cell_t *params)
