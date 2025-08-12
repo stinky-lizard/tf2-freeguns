@@ -226,17 +226,17 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     
     // g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");            //DEBUG
     
-    if (testSlots)
-    {
-        testSlots = false;
-        g_pSM->LogMessage(myself, "SLOT 0: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 0) ? "true" : "false"); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 1: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 1) ? "true" : "false"); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 2: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 2) ? "true" : "false"); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 3: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 3) ? "true" : "false"); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 4: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 4) ? "true" : "false"); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 5: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 5) ? "true" : "false"); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 6: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 6) ? "true" : "false"); //DEBUG
-    }
+    // if (testSlots)
+    // {
+    //     testSlots = false;
+    //     g_pSM->LogMessage(myself, "SLOT 0: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 0) ? "true" : "false"); //DEBUG
+    //     g_pSM->LogMessage(myself, "SLOT 1: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 1) ? "true" : "false"); //DEBUG
+    //     g_pSM->LogMessage(myself, "SLOT 2: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 2) ? "true" : "false"); //DEBUG
+    //     g_pSM->LogMessage(myself, "SLOT 3: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 3) ? "true" : "false"); //DEBUG
+    //     g_pSM->LogMessage(myself, "SLOT 4: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 4) ? "true" : "false"); //DEBUG
+    //     g_pSM->LogMessage(myself, "SLOT 5: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 5) ? "true" : "false"); //DEBUG
+    //     g_pSM->LogMessage(myself, "SLOT 6: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 6) ? "true" : "false"); //DEBUG
+    // }
 
     //remove GetLoadoutSlot detour, dont need it anymore for now (not until the next pickup event)
     g_GetLoadout_hook = {};
@@ -299,11 +299,26 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
             }
             // otherwise move on to the next
         }
+
+        
         g_pSM->LogMessage(myself, "slotToPlace:      %i", slotToDrop_PickupWeapon);   //DEBUG
         
         out = slotToDrop_PickupWeapon;
         //reset it
         slotToDrop_PickupWeapon = SLOTTODROP_PW_DEFAULT;
+    }
+    
+    if (iLoadoutClass == 8)
+    // testSlots = true;
+    if (iLoadoutClass == 8 && out == 1)
+    {
+        //we're a spy and it goes in our secondary slot! it's a revolver!
+        //so for some reason, revolvers list themselves as going in our secondary slot, but when added, they aren't in our secondary slot.
+        //they're a primary. i guess thats why you press 1 to get them...
+
+        slotToDrop_PickupWeapon = 0;
+        out = slotToDrop_PickupWeapon;
+        g_pSM->LogMessage(myself, "slotToPlace 2:    %i", slotToDrop_PickupWeapon);   //DEBUG
     }
     
     g_GetLoadout_hook = {};
