@@ -177,9 +177,8 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) con
 //so we're not initializing this to -1. this is so we always have a way to pick up (and drop) at least something, even if getting the item def fails.
 //initialize to -1 to disallow picking up weapons without getting the slot it would go in.
 //it creates an error, but also stops the pickup process. i judge this to be the better way, even if it replaces the primary
-//remember to change 
 
-#define SLOTTOPLACEITEMIN_PW_DEFAULT -1
+#define SLOTTOPLACEITEMIN_PW_DEFAULT 0
 static int slotToPlaceItemIn_PickupWeapon = SLOTTOPLACEITEMIN_PW_DEFAULT;
 
 bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWeapon)
@@ -188,18 +187,23 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     
     
     // can we use this weapon without further effort? i.e. is this weapon meant for us?
+    
     int myClass;
     GetEntProp(this, "m_iClass", myClass);
     g_pSM->LogMessage(myself, "myClass: %i", myClass);  //DEBUG
-        
+    
+    // bool canUseCurrentClass = pItem->GetStaticData()->CanBeUsedByClass(myClass);
+    int itemDefIndex;
+    GetEntProp(pDroppedWeapon, "m_iItemDefinitionIndex", itemDefIndex);
+    // g_pSM->LogMessage(myself, "itemDefIndex: %i", itemDefIndex);  //DEBUG
+
+
+
     // //if no, we'll have to get the slot the weapon normally goes in and use that instead
     //get the default slot for this weapon (almost always the only slot, minus the shotgun, which will be a primary)
 
     // slotToPlaceItemIn_PickupWeapon = pItem->GetStaticData()->GetDefaultLoadoutSlot();
 
-    int itemDefIndex;
-    GetEntProp(pDroppedWeapon, "m_iItemDefinitionIndex", itemDefIndex);
-    g_pSM->LogMessage(myself, "itemDefIndex: %i", itemDefIndex);  //DEBUG
 
     
 
@@ -230,7 +234,19 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
     
     // g_pSM->LogMessage(myself, "DETOUR: POST  GetLoadout_PW");                //DEBUG
 
-    g_pSM->LogMessage(myself, "out: %i", out);
+    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 0 (Undefined): %i", g_GetLoadout_hook.thiscall<int>(this, 0));                              //DEBUG
+    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 1 (Scout    ): %i", g_GetLoadout_hook.thiscall<int>(this, 1));                              //DEBUG
+    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 2 (Sniper   ): %i", g_GetLoadout_hook.thiscall<int>(this, 2));                              //DEBUG
+    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 3 (Soldier  ): %i", g_GetLoadout_hook.thiscall<int>(this, 3));                              //DEBUG
+    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 4 (Demo     ): %i", g_GetLoadout_hook.thiscall<int>(this, 4));                              //DEBUG
+    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 5 (Medic    ): %i", g_GetLoadout_hook.thiscall<int>(this, 5));                              //DEBUG
+    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 6 (Heavy    ): %i", g_GetLoadout_hook.thiscall<int>(this, 6));                              //DEBUG
+    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 7 (Pyro     ): %i", g_GetLoadout_hook.thiscall<int>(this, 7));                              //DEBUG
+    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 8 (Spy      ): %i", g_GetLoadout_hook.thiscall<int>(this, 8));                              //DEBUG
+    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 9 (Engineer ): %i", g_GetLoadout_hook.thiscall<int>(this, 9));                              //DEBUG
+
+    g_pSM->LogMessage(myself, "out (me):    %i", out);                              //DEBUG
+    g_pSM->LogMessage(myself, "slotToPlace: %i", slotToPlaceItemIn_PickupWeapon);   //DEBUG
 
     //would we not be able to pick this up? 
     if (slotToPlaceItemIn_PickupWeapon != -1)
@@ -289,10 +305,10 @@ static bool GetEntProp(void* pEntity, const char* prop, int& result, bool isEnti
     } 
 
     offset = info.actual_offset; 
-    g_pSM->LogMessage(myself, "offset: %i", offset);    //DEBUG
+    // g_pSM->LogMessage(myself, "offset: %i", offset);    //DEBUG
     pProp = info.prop; 
     bit_count = pProp->m_nBits;
-    g_pSM->LogMessage(myself, "bit_count: %i", bit_count);    //DEBUG
+    // g_pSM->LogMessage(myself, "bit_count: %i", bit_count);    //DEBUG
 
     //get if SPROP_UNSIGNED flag is set
     is_unsigned = ((pProp->GetFlags() & SPROP_UNSIGNED) == SPROP_UNSIGNED);
