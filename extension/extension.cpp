@@ -127,7 +127,7 @@ bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWe
     g_pSM->LogMessage(myself, "-----------------------------------------");              //DEBUG
     g_pSM->LogMessage(myself, "-----------------------------------------");              //DEBUG
     g_pSM->LogMessage(myself, "Starting pickup process.");              //DEBUG
-    g_pSM->LogMessage(myself, "DETOUR: PRE   CanPickup");               //DEBUG
+    // g_pSM->LogMessage(myself, "DETOUR: PRE   CanPickup");               //DEBUG
     
     //GetLoadoutSlot is after all the preliminary checks we want to keep. we don't care that it does all that other stuff
     //well use this as a marker to tell if those checks passed
@@ -138,12 +138,12 @@ bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWe
     bool out = g_CanPickup_hook.thiscall<bool>(this, pWeapon);
 
     
-    g_pSM->LogMessage(myself, "DETOUR: POST  CanPickup");               //DEBUG
+    // g_pSM->LogMessage(myself, "DETOUR: POST  CanPickup");               //DEBUG
 
     //reset the GetLoadout hook
     g_GetLoadout_hook = {};
 
-    if (!weGood_CanPickup) g_pSM->LogMessage(myself, "DETOUR: weGood false...");    //DEBUG
+    // if (!weGood_CanPickup) g_pSM->LogMessage(myself, "DETOUR: weGood false...");    //DEBUG
 
     //if GetLoadout ran, then all the checks passed, and we're good to pick up the weapon
     if (weGood_CanPickup)
@@ -169,7 +169,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) con
     // g_pSM->LogMessage(myself, "DETOUR: Setting weGood");                //DEBUG
     weGood_CanPickup = true;
     
-    if (!g_GetLoadout_hook) g_pSM->LogMessage(myself, "DETOUR: Something's wrong...");                //DEBUG
+    // if (!g_GetLoadout_hook) g_pSM->LogMessage(myself, "DETOUR: Something's wrong...");                //DEBUG
     
     int out = g_GetLoadout_hook.thiscall<int>(this, iLoadoutClass);
 
@@ -237,10 +237,15 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
 //don't translate our weapons
 const char* detour_TranslateWeaponEntForClass( const char *pszName, int iClass )
 {
-    // if (translateDetourEnabled)
-    if (false)  //DEBUG
+    if (translateDetourEnabled)
     {
         translateDetourEnabled = false;
+        if (strcmp(pszName, "tf_weapon_shotgun") == 0)
+        {
+            //it doesnt know how to make that
+            g_pSM->LogMessage(myself, "Translating shotgun to shotgun_soldier..."); //DEBUG
+            pszName = "tf_weapon_shotgun_soldier";
+        }
         return pszName;
     }
     return g_Translate_hook.call<const char*>(pszName, iClass);
@@ -313,6 +318,16 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
             {
                 //the weapon is meant for this class!
                 slotToDrop_PickupWeapon = slotForThisClass;
+
+                if (i == 8 && slotForThisClass == 1)
+                {
+                    //this is a secondary on the spy -- it's a revolver!!!
+                    //drop the primary instead because it's a secondary that's selected with 1
+                    //TODO: do this also if the player is spy and out returns 1
+                    //TODO: this might cause a lot of problems. we might have nothing in some slot.
+                    slotToDrop_PickupWeapon = 0;
+                                        
+                }
                 break;
             }
             // otherwise move on to the next
