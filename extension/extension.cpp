@@ -172,12 +172,13 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) con
     // if (!g_GetLoadout_hook) g_pSM->LogMessage(myself, "DETOUR: Something's wrong...");                //DEBUG
     
     int out = g_GetLoadout_hook.thiscall<int>(this, iLoadoutClass);
-
+    
     g_GetLoadout_hook = {};
     
     return out; 
 }
 
+static bool testSlots = false;
 
 
 bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWeapon)
@@ -225,6 +226,18 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     
     // g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");            //DEBUG
     
+    if (testSlots)
+    {
+        testSlots = false;
+        g_pSM->LogMessage(myself, "SLOT 0: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 0) ? "true" : "false"); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 1: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 1) ? "true" : "false"); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 2: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 2) ? "true" : "false"); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 3: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 3) ? "true" : "false"); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 4: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 4) ? "true" : "false"); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 5: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 5) ? "true" : "false"); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 6: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 6) ? "true" : "false"); //DEBUG
+    }
+
     //remove GetLoadoutSlot detour, dont need it anymore for now (not until the next pickup event)
     g_GetLoadout_hook = {};
     
@@ -326,7 +339,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
                     //TODO: do this also if the player is spy and out returns 1
                     //TODO: this might cause a lot of problems. we might have nothing in some slot.
                     slotToDrop_PickupWeapon = 0;
-                                        
+                    testSlots = true;
                 }
                 break;
             }
