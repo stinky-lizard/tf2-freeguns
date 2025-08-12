@@ -31,13 +31,13 @@ class CBaseEntity
     
 };
     
-class CBaseCombatCharacter : public CBaseEntity
-{
-public:
-    CBaseCombatWeapon* Weapon_GetSlot( int slot ) const;
-};
+// class CBaseCombatCharacter : public CBaseEntity
+// {
+// public:
+//     CBaseCombatWeapon* Weapon_GetSlot( int slot ) const;
+// };
 
-class CTFPlayer : public CBaseCombatCharacter
+class CTFPlayer : public CBaseEntity
 {
     
     public:
@@ -76,7 +76,6 @@ class CTFItemDefinition
 SafetyHookInline g_CanPickup_hook{};
 SafetyHookInline g_PickupWeapon_hook{};
 SafetyHookInline g_GetLoadout_hook{};
-SafetyHookInline g_WeaponGetSlot_hook{};
 SafetyHookInline g_GetEnt_hook{};
 SafetyHookInline g_Translate_hook{};
 
@@ -102,12 +101,6 @@ public:
 
 };
 
-class CBaseCmbtChrDetours : CBaseCombatCharacter
-{
-public:
-    CBaseCombatWeapon* detour_Weapon_GetSlot( int slot ) const;
-};
-
 extern const char* detour_TranslateWeaponEntForClass( const char *pszName, int iClass );
 static bool translateDetourEnabled = false;
 
@@ -120,14 +113,8 @@ bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback)
 class CallWrappers
 {
     public:
-    static ICallWrapper *GetClassIndex;
-    static ICallWrapper *GetItem;
-    static ICallWrapper *GetPlayerClass;
-    static ICallWrapper *CanBeUsedByClass;
-    static ICallWrapper *GetDefaultLoadoutSlot;
-    static ICallWrapper *IsValid;
-    static ICallWrapper *GetStaticData;
-    
+    static ICallWrapper *Weapon_GetSlot;
+
     static bool InitCalls();
 
     static bool wrappersInitialized;
@@ -142,3 +129,4 @@ IGameConfig *g_pGameConf = NULL;
 bool FreegunsEnabled = true;
 
 #endif // _INCLUDE_SOURCEMOD_EXTENSION_FREEGUNS_H
+

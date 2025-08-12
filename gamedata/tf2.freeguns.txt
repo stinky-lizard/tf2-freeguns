@@ -35,12 +35,6 @@
 				"linux"		"@_ZN9CTFPlayer23GetEntityForLoadoutSlotEib"
 				"linux64"		"@_ZN9CTFPlayer23GetEntityForLoadoutSlotEib"
 			}
-			"CBaseCombatCharacter::Weapon_GetSlot"
-			{
-				"library"	"server"
-				"linux64"	"@_ZNK20CBaseCombatCharacter14Weapon_GetSlotEi"
-				"linux"		"@_ZNK20CBaseCombatCharacter14Weapon_GetSlotEi"
-			}
 			"TranslateWeaponEntForClass"
 			{
 				"library"	"server"

@@ -83,8 +83,6 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     if (!InitDetour("CTFPlayer::CanPickupDroppedWeapon", &g_CanPickup_hook, (void*)(&CTFPlayerDetours::detour_CanPickupDroppedWeapon))) return false;
     
     if (!InitDetour("CTFPlayer::PickupWeaponFromOther", &g_PickupWeapon_hook, (void*)(&CTFPlayerDetours::detour_PickupWeaponFromOther))) return false;
-
-    if (!InitDetour("CBaseCombatCharacter::Weapon_GetSlot", &g_WeaponGetSlot_hook, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot))) return false;
     
     if (!InitDetour("CTFPlayer::GetEntityForLoadoutSlot", &g_GetEnt_hook, (void*)(&CTFPlayerDetours::detour_GetEntityForLoadoutSlot))) return false;
     
@@ -178,7 +176,8 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) con
     return out; 
 }
 
-static bool testSlots = false;
+static bool printMyWeaponSlots = false;
+static bool isDroppedWeaponDisallowed = false;
 
 
 bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWeapon)
@@ -226,9 +225,9 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     
     // g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");            //DEBUG
     
-    // if (testSlots)
+    // if (printMyWeaponSlots)
     // {
-    //     testSlots = false;
+    //     printMyWeaponSlots = false;
     //     g_pSM->LogMessage(myself, "SLOT 0: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 0) ? "true" : "false"); //DEBUG
     //     g_pSM->LogMessage(myself, "SLOT 1: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 1) ? "true" : "false"); //DEBUG
     //     g_pSM->LogMessage(myself, "SLOT 2: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 2) ? "true" : "false"); //DEBUG
@@ -293,7 +292,21 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
                     //TODO: do this also if the player is spy and out returns 1
                     //TODO: this might cause a lot of problems. we might have nothing in some slot.
                     slotToDrop_PickupWeapon = 0;
-                    testSlots = true;
+                    // printMyWeaponSlots = true;
+                }
+                else if (i == 8 && slotForThisClass == 2)
+                {
+                    //this is a melee on the spy -- it's a knife!
+                    //the spy can equip some all-class melees, but those are also equippable by the scout, so the for loop would stop at the scout
+                    //this would stop the function after GetEnt doesn't find a weapon in slot -1, but we're skipping past that check.
+                    //isDroppedWeaponDisallowed will be checked - if its true, don't skip past that return false in PickupWeapon.
+                    //result: GetEnt finds nothing and PickupWeapon returns false.
+
+                    //TODO: find WHY this crashes and fix that.
+                    //DEBUG: allow knives for now while testing
+
+                    // isDroppedWeaponDisallowed = true;
+                    // slotToDrop_PickupWeapon = -1;
                 }
                 break;
             }
@@ -308,8 +321,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
         slotToDrop_PickupWeapon = SLOTTODROP_PW_DEFAULT;
     }
     
-    if (iLoadoutClass == 8)
-    // testSlots = true;
+    // if (iLoadoutClass == 8) printMyWeaponSlots = true;
     if (iLoadoutClass == 8 && out == 1)
     {
         //we're a spy and it goes in our secondary slot! it's a revolver!
@@ -320,6 +332,11 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
         out = slotToDrop_PickupWeapon;
         g_pSM->LogMessage(myself, "slotToPlace 2:    %i", slotToDrop_PickupWeapon);   //DEBUG
     }
+    // if (iLoadoutClass == 8 && out == 2)
+    // {
+    //     //we're picking up a melee as the spy! but that doesn't cause a crash, afaik, so it's okay.
+    // }
+
     
     g_GetLoadout_hook = {};
     
@@ -332,10 +349,12 @@ CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot,
     
     if (getEntDetourEnabled && !out)
     {
-        g_pSM->LogMessage(myself, "GetEnt failed, falling back to WeaponGetSlot..."); //DEBUG
+        g_pSM->LogMessage(myself, "GetEnt failed, falling back to Weapon_GetSlot..."); //DEBUG
         
         //it didn't find anything, probably because the slot is filled by another class' weapon.
-        out = (CBaseEntity*) g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, iLoadoutSlot);
+        ArgBuffer<void*, int> weapongetslot_vstk(this, iLoadoutSlot);
+        CallWrappers::Weapon_GetSlot->Execute(weapongetslot_vstk, out);
+
         if (!out)
         {
             //uh oh
@@ -347,11 +366,6 @@ CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot,
     getEntDetourEnabled = false;
     
     return out;
-}
-
-CBaseCombatWeapon* CBaseCmbtChrDetours::detour_Weapon_GetSlot( int slot ) const
-{
-    return g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, slot);
 }
 
 //don't translate our weapons
@@ -384,9 +398,6 @@ void Freeguns::SDK_OnUnload()
     if (g_GetLoadout_hook)
         g_GetLoadout_hook = {};
     
-    if (g_WeaponGetSlot_hook)
-        g_WeaponGetSlot_hook = {};
-    
     if (g_Translate_hook)
         g_Translate_hook = {};
     
@@ -395,13 +406,9 @@ void Freeguns::SDK_OnUnload()
 
     //destroy callers
     CallWrappers::wrappersInitialized = false;
-    CallWrappers::CanBeUsedByClass->Destroy();
-    CallWrappers::GetClassIndex->Destroy();
-    CallWrappers::GetDefaultLoadoutSlot->Destroy();
-    CallWrappers::GetItem->Destroy();
-    CallWrappers::GetPlayerClass->Destroy();
-    CallWrappers::GetStaticData->Destroy();
-    CallWrappers::IsValid->Destroy();
+
+    if (CallWrappers::Weapon_GetSlot)
+        CallWrappers::Weapon_GetSlot->Destroy();
 
 }
 
@@ -438,132 +445,27 @@ bool GetVtableOffset(const char* key, int* value)
 
 bool CallWrappers::InitCalls()
 {
-    //int CTFPlayerClassShared::GetClassIndex( void ) const;
-    if (!GetClassIndex)
+    //CBaseCombatWeapon* Weapon_GetSlot( int slot ) const;
+    if (!Weapon_GetSlot)
     {
-        const char* key = "CTFPlayerClassShared::GetClassIndex";
-        int offset; 
-        if (!GetVtableOffset(key, &offset)) return false;
-
-        PassInfo ret;
-
-        ret.type = PassType_Basic;
-        ret.flags = PASSFLAG_BYVAL;
-        ret.size = sizeof(int);
-
-        //function takes no parameters, so params is not needed. ret could also be null if it returned void
-        //proof:    https://github.com/alliedmodders/sourcemod/blob/92fb9f62ddc0ce63da8440f53edcba74fa3abe95/extensions/tf2/natives.cpp#L378
-        //          https://github.com/ValveSoftware/source-sdk-2013/blob/68c8b82fdcb41b8ad5abde9fe1f0654254217b8e/src/game/server/player.cpp#L5277
-        GetClassIndex = g_pBinTools->CreateCall();
-        ASSERT_CALLER_INIT(GetClassIndex)
-    }
-    //CEconItemView* CTFDroppedWeapon::GetItem();
-    if (!GetItem)
-    {
-        const char* key = "CTFDroppedWeapon::GetItem";
-        int offset;
-        if (!GetVtableOffset(key, &offset)) return false;
-        
-        PassInfo ret;
-        
-        //returns a pointer
-        ret.type = PassType_Basic;
-        ret.flags = PASSFLAG_BYVAL;
-        ret.size = sizeof(void*);
-        
-        GetClassIndex = g_pBinTools->CreateCall();
-        ASSERT_CALLER_INIT(GetItem)
-    }
-    
-    // CTFPlayerClass* CTFPlayer::GetPlayerClass( void );
-    if (!GetPlayerClass)
-    {
-        const char* key = "CTFPlayer::GetPlayerClass";
-        int offset;
-        if (!GetVtableOffset(key, &offset)) return false;
-
-        PassInfo ret;
-
-        ret.type = PassType_Basic;
-        ret.flags = PASSFLAG_BYVAL;
-        ret.size = sizeof(void*);
-
-        GetPlayerClass = g_pBinTools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
-        ASSERT_CALLER_INIT(GetPlayerClass)
-    }
-
-    // int CTFItemDefinition::CanBeUsedByClass( int iClass ) const;
-    if (!CanBeUsedByClass)
-    {
-        const char* key = "CTFItemDefinition::CanBeUsedByClass";
+        const char* key = "CBaseCombatCharacter::Weapon_GetSlot";
         int offset;
         if (!GetVtableOffset(key, &offset)) return false;
 
         PassInfo ret, params[1];
-        
-        ret.type = PassType_Basic;
-        ret.flags = PASSFLAG_BYVAL;
-        ret.size = sizeof(int);
-
-        params[0].type = PassType_Basic;
-        params[0].flags = PASSFLAG_BYVAL;
-        params[0].size = sizeof(int);
-
-        CanBeUsedByClass = g_pBinTools->CreateVCall(offset, 0, 0, &ret, params, 1);
-        ASSERT_CALLER_INIT(CanBeUsedByClass)
-    }
-
-    // int CTFItemDefinition::GetDefaultLoadoutSlot( void ) const;
-    if (!GetDefaultLoadoutSlot)
-    {
-        const char* key = "CTFItemDefinition::GetDefaultLoadoutSlot";
-        int offset;
-        if (!GetVtableOffset(key, &offset)) return false;
-
-        PassInfo ret;
-
-        ret.type = PassType_Basic;
-        ret.flags = PASSFLAG_BYVAL;
-        ret.size = sizeof(int);
-
-        GetDefaultLoadoutSlot = g_pBinTools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
-        ASSERT_CALLER_INIT(GetDefaultLoadoutSlot)
-    }
-
-    // bool CEconItemView::IsValid( void ) const;
-    if(!IsValid)
-    {
-        const char* key = "CEconItemView::IsValid";
-        int offset;
-        if (!GetVtableOffset(key, &offset)) return false;
-
-        PassInfo ret;
-
-        ret.type = PassType_Basic;
-        ret.flags = PASSFLAG_BYVAL;
-        ret.size = sizeof(bool);
-
-        IsValid = g_pBinTools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
-        ASSERT_CALLER_INIT(IsValid)
-    }
-
-    // GameItemDefinition_t* CEconItemView::GetStaticData( void ) const;
-    if (!GetStaticData)
-    {
-        const char* key = "CEconItemView::GetStaticData";
-        int offset;
-        if (!GetVtableOffset(key, &offset)) return false;
-
-        PassInfo ret;
 
         ret.type = PassType_Basic;
         ret.flags = PASSFLAG_BYVAL;
         ret.size = sizeof(void*);
+        
+        params[0].type = PassType_Basic;
+        params[0].flags = PASSFLAG_BYVAL;
+        params[0].size = sizeof(int);
 
-        GetStaticData = g_pBinTools->CreateVCall(offset, 0, 0, &ret, NULL, 0);
-        ASSERT_CALLER_INIT(GetStaticData)
+        Weapon_GetSlot = g_pBinTools->CreateVCall(offset, 0, 0, &ret, params, 1);
+        ASSERT_CALLER_INIT(Weapon_GetSlot);
+
     }
-
 
     return true;
 
