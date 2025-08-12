@@ -35,8 +35,6 @@
 #include <string>
 #include <iostream>
 
-#include <server_class.h>
-
 using namespace std;
 
 /**
@@ -283,117 +281,6 @@ void Freeguns::SDK_OnUnload()
 void Freeguns::SDK_OnAllLoaded()
 {
     // sharesys->AddNatives(myself, MyNatives);
-}
-
-
-// native int GetEntProp(int entity, PropType type, const char[] prop, int size=4, int element=0);
-static bool GetEntProp(void* pEntity, const char* prop, int& result, bool isEntity, void* entResult, int element)
-{
-    
-	int offset;
-    int size = 4;
-
-    int bit_count;
-	bool is_unsigned = false;
-        
-    ServerClass *pServerClass = gamehelpers->FindEntityServerClass((CBaseEntity*)pEntity);
-    
-    sm_sendprop_info_t info; 
-    SendProp *pProp; 
-
-    if (!pServerClass) 
-    {
-        g_pSM->LogError(myself, "Failed to retrieve server class for %s!", prop);
-        return false;
-    }
-
-    //get info about prop
-    bool infoFound = gamehelpers->FindSendPropInfo(pServerClass->GetName(), prop, &info);
-    if (!infoFound) 
-    { 
-        const char *class_name = gamehelpers->GetEntityClassname((CBaseEntity*)pEntity); 
-        g_pSM->LogError(myself,"Property \"%s\" not found (entity %s)", prop, class_name);
-        return false; 
-    } 
-
-    offset = info.actual_offset; 
-    // g_pSM->LogMessage(myself, "offset: %i", offset);    //DEBUG
-    pProp = info.prop; 
-    bit_count = pProp->m_nBits;
-    // g_pSM->LogMessage(myself, "bit_count: %i", bit_count);    //DEBUG
-
-    //get if SPROP_UNSIGNED flag is set
-    is_unsigned = ((pProp->GetFlags() & SPROP_UNSIGNED) == SPROP_UNSIGNED);
-
-    
-    // unsure what SPROP_VARINT is... cant find what it means or where its declared/defined
-    // if (pProp->GetFlags() & SPROP_VARINT)
-    // {
-    //     bit_count = sizeof(int) * 8;
-    // }
-
-
-    if (isEntity)
-    {
-        CBaseHandle *hndl;
-        hndl = (CBaseHandle *)((uint8_t *)pEntity + offset);
-
-        CBaseEntity *pHandleEntity = gamehelpers->ReferenceToEntity(hndl->GetEntryIndex());
-
-        // if (!pHandleEntity || *hndl != reinterpret_cast<IHandleEntity *>(pHandleEntity)->GetRefEHandle())
-        if (!pHandleEntity)
-        {
-            g_pSM->LogError(myself, "GetEntProp isEntity check didn't pass");
-            return false;
-        }
-
-        entResult = pHandleEntity;
-        return true;
-
-    }
-
-    //bleh
-	if (bit_count < 1)
-	{
-		bit_count = size * 8;
-	}
-	if (bit_count >= 17)
-	{
-		result = *(int32_t *)((uint8_t *)pEntity + offset);
-        return true;
-	}
-	else if (bit_count >= 9)
-	{
-		if (is_unsigned)
-		{
-			result = *(uint16_t *)((uint8_t *)pEntity + offset);
-            return true;
-		}
-		else
-		{
-			result = *(int16_t *)((uint8_t *)pEntity + offset);
-            return true;
-		}
-	}
-	else if (bit_count >= 2)
-	{
-		if (is_unsigned)
-		{
-			result = *(uint8_t *)((uint8_t *)pEntity + offset);
-            return true;
-		}
-		else
-		{
-			result = *(int8_t *)((uint8_t *)pEntity + offset);
-            return true;
-		}
-	}
-	else
-	{
-		return *(bool *)((uint8_t *)pEntity + offset) ? 1 : 0;
-	}
-
-	return 0;
 }
 
 
