@@ -187,12 +187,8 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     
     
     // can we use this weapon without further effort? i.e. is this weapon meant for us?
+    //nevermind, GetLoadoutSlot on the dropped weapon will return a nonnegative number if we can pick it up, or -1 if we can't. No need to check ourselves.
     
-    int myClass;
-    GetEntProp(this, "m_iClass", myClass);
-    g_pSM->LogMessage(myself, "myClass: %i", myClass);  //DEBUG
-    
-    // bool canUseCurrentClass = pItem->GetStaticData()->CanBeUsedByClass(myClass);
     int itemDefIndex;
     GetEntProp(pDroppedWeapon, "m_iItemDefinitionIndex", itemDefIndex);
     // g_pSM->LogMessage(myself, "itemDefIndex: %i", itemDefIndex);  //DEBUG
@@ -203,9 +199,6 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     //get the default slot for this weapon (almost always the only slot, minus the shotgun, which will be a primary)
 
     // slotToPlaceItemIn_PickupWeapon = pItem->GetStaticData()->GetDefaultLoadoutSlot();
-
-
-    
 
     //detour GetLoadoutSlot so we can replace the slot it says with our own
     if (!InitDetour("CTFItemDefinition::GetLoadoutSlot", &g_GetLoadout_hook, (void*)(&CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon))) 
@@ -230,26 +223,15 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
     g_pSM->LogMessage(myself, "DETOUR: PRE   GetLoadout_PW");                //DEBUG
     
     //first get the original result
-    bool out = g_GetLoadout_hook.thiscall<int>(this, iLoadoutClass);
+    int out = g_GetLoadout_hook.thiscall<int>(this, iLoadoutClass);
     
     // g_pSM->LogMessage(myself, "DETOUR: POST  GetLoadout_PW");                //DEBUG
-
-    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 0 (Undefined): %i", g_GetLoadout_hook.thiscall<int>(this, 0));                              //DEBUG
-    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 1 (Scout    ): %i", g_GetLoadout_hook.thiscall<int>(this, 1));                              //DEBUG
-    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 2 (Sniper   ): %i", g_GetLoadout_hook.thiscall<int>(this, 2));                              //DEBUG
-    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 3 (Soldier  ): %i", g_GetLoadout_hook.thiscall<int>(this, 3));                              //DEBUG
-    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 4 (Demo     ): %i", g_GetLoadout_hook.thiscall<int>(this, 4));                              //DEBUG
-    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 5 (Medic    ): %i", g_GetLoadout_hook.thiscall<int>(this, 5));                              //DEBUG
-    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 6 (Heavy    ): %i", g_GetLoadout_hook.thiscall<int>(this, 6));                              //DEBUG
-    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 7 (Pyro     ): %i", g_GetLoadout_hook.thiscall<int>(this, 7));                              //DEBUG
-    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 8 (Spy      ): %i", g_GetLoadout_hook.thiscall<int>(this, 8));                              //DEBUG
-    g_pSM->LogMessage(myself, "SLOTS FOR THIS WEAPON: CLASS 9 (Engineer ): %i", g_GetLoadout_hook.thiscall<int>(this, 9));                              //DEBUG
 
     g_pSM->LogMessage(myself, "out (me):    %i", out);                              //DEBUG
     g_pSM->LogMessage(myself, "slotToPlace: %i", slotToPlaceItemIn_PickupWeapon);   //DEBUG
 
     //would we not be able to pick this up? 
-    if (slotToPlaceItemIn_PickupWeapon != -1)
+    if (out == -1)
     {
         out = slotToPlaceItemIn_PickupWeapon;
         //reset it
