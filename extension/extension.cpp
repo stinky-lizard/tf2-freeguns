@@ -57,12 +57,6 @@ SMEXT_LINK(&g_Freeguns);
 Bind Natives & Hooks 
 */
 
-const sp_nativeinfo_t MyNatives[] = 
-{
-    // {"enableDetours", EnableDetours},
-    // {"disableDetours", DisableDetours},
-	{NULL,			NULL},
-};
 
 bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 {
@@ -375,14 +369,32 @@ const char* detour_TranslateWeaponEntForClass( const char *pszName, int iClass )
 
 void Freeguns::SDK_OnUnload()
 {
-    g_CanPickup_hook = {};
-    g_PickupWeapon_hook = {};
-    g_GetLoadout_hook = {};
-    g_WeaponGetSlot_hook = {};
-    g_Translate_hook = {};
-    g_GetEnt_hook = {};
+    if (g_CanPickup_hook)
+        g_CanPickup_hook = {};
+
+    if (g_PickupWeapon_hook)
+        g_PickupWeapon_hook = {};
+    
+    if (g_GetLoadout_hook)
+        g_GetLoadout_hook = {};
+    
+    if (g_WeaponGetSlot_hook)
+        g_WeaponGetSlot_hook = {};
+    
+    if (g_Translate_hook)
+        g_Translate_hook = {};
+    
+    if (g_GetEnt_hook)
+        g_GetEnt_hook = {};
 
 }
+
+const sp_nativeinfo_t MyNatives[] = 
+{
+    // {"enableDetours", EnableDetours},
+    // {"disableDetours", DisableDetours},
+	{NULL,			NULL},
+};
 
 void Freeguns::SDK_OnAllLoaded()
 {

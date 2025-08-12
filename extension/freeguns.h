@@ -117,4 +117,6 @@ bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback)
 
 IGameConfig *g_pGameConf = NULL;
 
-#endif // _INCLUDE_SOURCEMOD_EXTENSION_FREEGUNS_H_
+bool FreegunsEnabled = true;
+
+#endif // _INCLUDE_SOURCEMOD_EXTENSION_FREEGUNS_H
