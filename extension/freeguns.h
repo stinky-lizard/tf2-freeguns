@@ -2,6 +2,8 @@
 #define _INCLUDE_SOURCEMOD_EXTENSION_FREEGUNS_H_
 
 #include <safetyhook.hpp>
+#include <IBinTools.h>
+#include <sm_argbuffer.h>
 
 /*
  * Declarations for the Freeguns extension's functionality.
@@ -112,6 +114,26 @@ static bool translateDetourEnabled = false;
 //Wrapper function to bind the detours
 
 bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback);
+
+//bintools / sdk calls
+
+class CallWrappers
+{
+    public:
+    static ICallWrapper *GetClassIndex;
+    static ICallWrapper *GetItem;
+    static ICallWrapper *GetPlayerClass;
+    static ICallWrapper *CanBeUsedByClass;
+    static ICallWrapper *GetDefaultLoadoutSlot;
+    static ICallWrapper *IsValid;
+    static ICallWrapper *GetStaticData;
+    
+    static bool InitCalls();
+
+    static bool wrappersInitialized;
+};
+
+IBinTools *g_pBinTools = NULL;
 
 //Other stuff needed
 

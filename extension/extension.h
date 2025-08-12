@@ -79,7 +79,7 @@ public:
 	 * @param maxlen	Size of error message buffer.
 	 * @return			True if working, false otherwise.
 	 */
-	// virtual bool QueryRunning(char *error, size_t maxlen);
+	virtual bool QueryRunning(char *error, size_t maxlen);
 public:
 #if defined SMEXT_CONF_METAMOD
 	/**
