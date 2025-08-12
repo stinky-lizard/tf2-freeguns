@@ -35,13 +35,6 @@
 				"linux"		"@_ZN9CTFPlayer23GetEntityForLoadoutSlotEib"
 				"mac"		"@_ZN9CTFPlayer23GetEntityForLoadoutSlotEib"
 			}
-			"CEconItemView::GetStaticData"
-			{
-				"library"	"server"
-				"windows"	
-				"linux"		
-
-			}
 		}
 		"Offsets"
 		{
@@ -61,6 +54,14 @@
 				"linux64"	"394"
 				"mac"		"394"
 			}
+			"CBaseCombatCharacter::Weapon_GetSlot"
+			{
+				"windows"	"279"
+				"windows64"	"279"
+				"linux"		"280"
+				"linux64"	"280"
+			}
+
 		}
 	}
 }

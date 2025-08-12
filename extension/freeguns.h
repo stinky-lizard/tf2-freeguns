@@ -11,6 +11,8 @@
 //this is all kinda messy, but I'm not sure the functions will bind to the originals otherwise
 
 class CEconItemView;    //hoist
+class CBaseCombatWeapon;
+class CBaseEntity;
 
 // class CTFPlayerClassShared
 // {
@@ -20,11 +22,7 @@ class CEconItemView;    //hoist
 
 // class CTFPlayerClass : public CTFPlayerClassShared {};
 
-class CTFDroppedWeapon
-{
-    // public:
-    // CEconItemView *GetItem();
-};
+class CTFDroppedWeapon;
 
 class CTFPlayer
 {
@@ -32,8 +30,7 @@ class CTFPlayer
     public:
     bool CanPickupDroppedWeapon( const CTFDroppedWeapon *pWeapon );
     bool PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
-    // CTFPlayerClass *GetPlayerClass( void );
-    
+    CBaseEntity *GetEntityForLoadoutSlot( int iLoadoutSlot, bool bForceCheckWearable = false );	
 };
 
 class CTFItemDefinition
@@ -44,6 +41,12 @@ class CTFItemDefinition
     // int CanBeUsedByClass( int iClass ) const;
     // int GetDefaultLoadoutSlot( void ) const;
 
+};
+
+class CBaseCombatCharacter
+{
+    public:
+    CBaseCombatWeapon* Weapon_GetSlot( int slot ) const;
 };
 
 // typedef CTFItemDefinition	GameItemDefinition_t;
@@ -58,7 +61,6 @@ class CTFItemDefinition
     
 // };
 
-class CBaseEntity;
 
 //okay were good
 
@@ -67,6 +69,8 @@ class CBaseEntity;
 SafetyHookInline g_CanPickup_hook{};
 SafetyHookInline g_PickupWeapon_hook{};
 SafetyHookInline g_GetLoadout_hook{};
+SafetyHookInline g_WeaponGetSlot_hook{};
+SafetyHookInline g_GetEnt_hook{};
 
 //Detour functions to bind to the objects
 
@@ -76,6 +80,7 @@ class CTFPlayerDetours : public CTFPlayer
 public:
     bool detour_CanPickupDroppedWeapon( const CTFDroppedWeapon *pWeapon );
     bool detour_PickupWeaponFromOther( CTFDroppedWeapon *pDroppedWeapon );
+    CBaseEntity* detour_GetEntityForLoadoutSlot( int iLoadoutSlot, bool bForceCheckWearable = false );	
     
 };
 
@@ -86,6 +91,12 @@ public:
     int detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) const; //might as well make this const too
     int detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) const; 
 
+};
+
+class CBaseCmbtChrDetours : CBaseCombatCharacter
+{
+public:
+    CBaseCombatWeapon* detour_Weapon_GetSlot( int slot ) const;
 };
 
 //Wrapper function to bind the detours

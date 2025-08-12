@@ -172,6 +172,11 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) con
     return out; 
 }
 
+CBaseCombatWeapon* CBaseCmbtChrDetours::detour_Weapon_GetSlot( int slot ) const
+{
+    return g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, slot);
+}
+
 
 bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWeapon)
 {
@@ -205,7 +210,22 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     
     //detour GetLoadoutSlot so we can replace the slot it says with our own
     if (!InitDetour("CTFItemDefinition::GetLoadoutSlot", &g_GetLoadout_hook, (void*)(&CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon))) 
-    g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_PickupWeapon!");
+        g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_PickupWeapon!");
+
+    
+    //woof
+    int vtableOffset;
+    g_pGameConf->GetOffset("CBaseCombatCharacter::Weapon_GetSlot", &vtableOffset);
+
+    int* vtableBasePointer = (int*)((int*)this)[0];
+    void* Weapon_GetSlotPointer = (void*)vtableBasePointer[vtableOffset];
+
+    g_WeaponGetSlot_hook = safetyhook::create_inline(Weapon_GetSlotPointer, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot));
+    
+    
+    if (!InitDetour("CTFPlayer::GetEntityForLoadoutSlot", &g_GetEnt_hook, (void*)(&CTFPlayerDetours::detour_GetEntityForLoadoutSlot)))
+        g_pSM->LogError(myself, "Could not initialize detour_GetEntityForLoadoutSlot!");
+
     
     //actually pick up the weapon and drop ours
     bool out = g_PickupWeapon_hook.thiscall<bool>(this, pDroppedWeapon);
@@ -214,9 +234,11 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     
     //remove GetLoadoutSlot detour, dont need it anymore for now (not until the next pickup event)
     g_GetLoadout_hook = {};
+    g_WeaponGetSlot_hook = {};
     
     return out;
 }
+
 
 // So we could default this to -1, or 0. defaulting to 0 would cause us to drop our primary, but we would still pick up the weapon.
 // Would work if we picked up a primary, but a secondary would cause us to just not have a primary and then stuff would get weird.
