@@ -237,7 +237,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
     
     // g_pSM->LogMessage(myself, "DETOUR: POST  GetLoadout_PW");                //DEBUG
 
-    g_pSM->LogMessage(myself, "out (me):    %i", out);                       //DEBUG
+    g_pSM->LogMessage(myself, "out (me):          %i", out);                       //DEBUG
     
     //would we not be able to pick this up? 
     if (out == -1)
@@ -246,7 +246,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
         // ... by checking every class until one of them returns something other than -1
         
         //from 0-9 the classes are: Undefined, Scout, Sniper, Soldier, Demo, Medic, Heavy, Pyro, Spy, Engineer
-        for (int i = 1; i++; i <= 9)
+        for (int i = 1; i <= 9; i++)
         {
             int slotForThisClass = g_GetLoadout_hook.thiscall<int>(this, i);
 
@@ -259,7 +259,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
             }
             // otherwise move on to the next
         }
-        g_pSM->LogMessage(myself, "slotToPlace: %i", slotToDrop_PickupWeapon);   //DEBUG
+        g_pSM->LogMessage(myself, "slotToPlace:       %i", slotToDrop_PickupWeapon);   //DEBUG
         
         out = slotToDrop_PickupWeapon;
         //reset it
