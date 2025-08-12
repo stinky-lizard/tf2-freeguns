@@ -247,52 +247,6 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     return out;
 }
 
-//don't translate our weapons
-const char* detour_TranslateWeaponEntForClass( const char *pszName, int iClass )
-{
-    if (translateDetourEnabled)
-    {
-        translateDetourEnabled = false;
-        if (strcmp(pszName, "tf_weapon_shotgun") == 0)
-        {
-            //it doesnt know how to make that
-            g_pSM->LogMessage(myself, "Translating shotgun to shotgun_soldier..."); //DEBUG
-            pszName = "tf_weapon_shotgun_soldier";
-        }
-        return pszName;
-    }
-    return g_Translate_hook.call<const char*>(pszName, iClass);
-}
-
-CBaseCombatWeapon* CBaseCmbtChrDetours::detour_Weapon_GetSlot( int slot ) const
-{
-    return g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, slot);
-}
-
-CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot, bool bForceCheckWearable)
-{
-    CBaseEntity* out = g_GetEnt_hook.thiscall<CBaseEntity*>(this, iLoadoutSlot, bForceCheckWearable);
-    
-    if (getEntDetourEnabled && !out)
-    {
-        g_pSM->LogMessage(myself, "GetEnt failed, falling back to WeaponGetSlot..."); //DEBUG
-        
-        //it didn't find anything, probably because the slot is filled by another class' weapon.
-        out = (CBaseEntity*) g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, iLoadoutSlot);
-        if (!out)
-        {
-            //uh oh
-            //... or we're picking up a weapon into a slot that isn't filled
-            g_pSM->LogMessage(myself, "Weapon_GetSlot failed to find weapon!"); //DEBUG
-        }
-    }
-
-    getEntDetourEnabled = false;
-
-    return out;
-}
-
-
 // So we could default this to -1, or 0. defaulting to 0 would cause us to drop our primary, but we would still pick up the weapon.
 // Would work if we picked up a primary, but a secondary would cause us to just not have a primary and then stuff would get weird.
 // Defaulting to -1 would cause GetEntityForLoadoutSlot to not find anything, and return nothing.
@@ -356,6 +310,53 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
     
     return out;
 }
+
+CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot, bool bForceCheckWearable)
+{
+    CBaseEntity* out = g_GetEnt_hook.thiscall<CBaseEntity*>(this, iLoadoutSlot, bForceCheckWearable);
+    
+    if (getEntDetourEnabled && !out)
+    {
+        g_pSM->LogMessage(myself, "GetEnt failed, falling back to WeaponGetSlot..."); //DEBUG
+        
+        //it didn't find anything, probably because the slot is filled by another class' weapon.
+        out = (CBaseEntity*) g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, iLoadoutSlot);
+        if (!out)
+        {
+            //uh oh
+            //... or we're picking up a weapon into a slot that isn't filled
+            g_pSM->LogMessage(myself, "Weapon_GetSlot failed to find weapon!"); //DEBUG
+        }
+    }
+    
+    getEntDetourEnabled = false;
+    
+    return out;
+}
+
+CBaseCombatWeapon* CBaseCmbtChrDetours::detour_Weapon_GetSlot( int slot ) const
+{
+    return g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, slot);
+}
+
+//don't translate our weapons
+const char* detour_TranslateWeaponEntForClass( const char *pszName, int iClass )
+{
+    if (translateDetourEnabled)
+    {
+        translateDetourEnabled = false;
+        if (strcmp(pszName, "tf_weapon_shotgun") == 0)
+        {
+            //it doesnt know how to make that
+            g_pSM->LogMessage(myself, "Translating shotgun to shotgun_soldier..."); //DEBUG
+            pszName = "tf_weapon_shotgun_soldier";
+        }
+        return pszName;
+    }
+    return g_Translate_hook.call<const char*>(pszName, iClass);
+}
+
+
 
 void Freeguns::SDK_OnUnload()
 {
