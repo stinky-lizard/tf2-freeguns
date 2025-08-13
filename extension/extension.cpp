@@ -285,8 +285,9 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
                 {
                     //this is a secondary on the spy -- it's a revolver!!!
                     //drop the primary instead because it's a secondary that's selected with 1
-                    //TODO: do this also if the player is spy and out returns 1
+
                     //TODO: this might cause a lot of problems. we might have nothing in some slot.
+
                     slotToDrop_PickupWeapon = 0;
                     // printMyWeaponSlots = true;
                 }
