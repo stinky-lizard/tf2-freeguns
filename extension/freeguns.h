@@ -2,8 +2,6 @@
 #define _INCLUDE_SOURCEMOD_EXTENSION_FREEGUNS_H_
 
 #include <safetyhook.hpp>
-#include <IBinTools.h>
-#include <sm_argbuffer.h>
 
 /*
  * Declarations for the Freeguns extension's functionality.
@@ -31,13 +29,13 @@ class CBaseEntity
     
 };
     
-// class CBaseCombatCharacter : public CBaseEntity
-// {
-// public:
-//     CBaseCombatWeapon* Weapon_GetSlot( int slot ) const;
-// };
+class CBaseCombatCharacter : public CBaseEntity
+{
+public:
+    CBaseCombatWeapon* Weapon_GetSlot( int slot ) const;
+};
 
-class CTFPlayer : public CBaseEntity
+class CTFPlayer : public CBaseCombatCharacter
 {
     
     public:
@@ -76,6 +74,7 @@ class CTFItemDefinition
 SafetyHookInline g_CanPickup_hook{};
 SafetyHookInline g_PickupWeapon_hook{};
 SafetyHookInline g_GetLoadout_hook{};
+SafetyHookInline g_WeaponGetSlot_hook{};
 SafetyHookInline g_GetEnt_hook{};
 SafetyHookInline g_Translate_hook{};
 
@@ -101,26 +100,18 @@ public:
 
 };
 
+class CBaseCmbtChrDetours : CBaseCombatCharacter
+{
+public:
+    CBaseCombatWeapon* detour_Weapon_GetSlot( int slot ) const;
+};
+
 extern const char* detour_TranslateWeaponEntForClass( const char *pszName, int iClass );
 static bool translateDetourEnabled = false;
 
 //Wrapper function to bind the detours
 
 bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback);
-
-//bintools / sdk calls
-
-class CallWrappers
-{
-    public:
-    static ICallWrapper *Weapon_GetSlot;
-
-    static bool InitCalls();
-
-    static bool wrappersInitialized;
-};
-
-IBinTools *g_pBinTools = NULL;
 
 //Other stuff needed
 
@@ -129,4 +120,3 @@ IGameConfig *g_pGameConf = NULL;
 bool FreegunsEnabled = true;
 
 #endif // _INCLUDE_SOURCEMOD_EXTENSION_FREEGUNS_H
-

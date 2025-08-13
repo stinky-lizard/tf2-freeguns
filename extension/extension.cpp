@@ -32,8 +32,6 @@
 #include "extension.h"
 #include "freeguns.h"
 
-#include <server_class.h>
-
 #include <string>
 #include <iostream>
 
@@ -73,16 +71,14 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 		}
 		return false;
 	}
-
-    //interfaces
-    sharesys->AddDependency(myself, "bintools.ext", true, true);
-
-
+    
     //init and enable detours here
     
     if (!InitDetour("CTFPlayer::CanPickupDroppedWeapon", &g_CanPickup_hook, (void*)(&CTFPlayerDetours::detour_CanPickupDroppedWeapon))) return false;
     
     if (!InitDetour("CTFPlayer::PickupWeaponFromOther", &g_PickupWeapon_hook, (void*)(&CTFPlayerDetours::detour_PickupWeaponFromOther))) return false;
+
+    if (!InitDetour("CBaseCombatCharacter::Weapon_GetSlot", &g_WeaponGetSlot_hook, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot))) return false;
     
     if (!InitDetour("CTFPlayer::GetEntityForLoadoutSlot", &g_GetEnt_hook, (void*)(&CTFPlayerDetours::detour_GetEntityForLoadoutSlot))) return false;
     
@@ -322,6 +318,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
     }
     
     // if (iLoadoutClass == 8) printMyWeaponSlots = true;
+
     if (iLoadoutClass == 8 && out == 1)
     {
         //we're a spy and it goes in our secondary slot! it's a revolver!
@@ -337,7 +334,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
     //     //we're picking up a melee as the spy! but that doesn't cause a crash, afaik, so it's okay.
     // }
 
-    
+
     g_GetLoadout_hook = {};
     
     return out;
@@ -349,12 +346,10 @@ CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot,
     
     if (getEntDetourEnabled && !out)
     {
-        g_pSM->LogMessage(myself, "GetEnt failed, falling back to Weapon_GetSlot..."); //DEBUG
+        g_pSM->LogMessage(myself, "GetEnt failed, falling back to WeaponGetSlot..."); //DEBUG
         
         //it didn't find anything, probably because the slot is filled by another class' weapon.
-        ArgBuffer<void*, int> weapongetslot_vstk(this, iLoadoutSlot);
-        CallWrappers::Weapon_GetSlot->Execute(weapongetslot_vstk, out);
-
+        out = (CBaseEntity*) g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, iLoadoutSlot);
         if (!out)
         {
             //uh oh
@@ -366,6 +361,11 @@ CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot,
     getEntDetourEnabled = false;
     
     return out;
+}
+
+CBaseCombatWeapon* CBaseCmbtChrDetours::detour_Weapon_GetSlot( int slot ) const
+{
+    return g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, slot);
 }
 
 //don't translate our weapons
@@ -398,17 +398,14 @@ void Freeguns::SDK_OnUnload()
     if (g_GetLoadout_hook)
         g_GetLoadout_hook = {};
     
+    if (g_WeaponGetSlot_hook)
+        g_WeaponGetSlot_hook = {};
+    
     if (g_Translate_hook)
         g_Translate_hook = {};
     
     if (g_GetEnt_hook)
         g_GetEnt_hook = {};
-
-    //destroy callers
-    CallWrappers::wrappersInitialized = false;
-
-    if (CallWrappers::Weapon_GetSlot)
-        CallWrappers::Weapon_GetSlot->Destroy();
 
 }
 
@@ -422,61 +419,8 @@ const sp_nativeinfo_t MyNatives[] =
 void Freeguns::SDK_OnAllLoaded()
 {
     // sharesys->AddNatives(myself, MyNatives);
-    SM_GET_LATE_IFACE(BINTOOLS, g_pBinTools);
-
-    if (!g_pBinTools) return;
-
-    if (CallWrappers::InitCalls()) CallWrappers::wrappersInitialized = true;
-    else CallWrappers::wrappersInitialized = false;
 }
 
-bool GetVtableOffset(const char* key, int* value)
-{
-    if (!g_pGameConf->GetOffset(key, value))
-    {
-        g_pSM->LogError(myself, "Could not get offset for %s!", key);
-        return false;
-    }
-    g_pSM->LogMessage(myself, "Retrieved offset for &s", key);              //DEBUG
-    return true;
-}
-
-#define ASSERT_CALLER_INIT(caller) if(!caller) { g_pSM->LogError(myself, "Failed to initialize SDK call for %s!", key); return false; }
-
-bool CallWrappers::InitCalls()
-{
-    //CBaseCombatWeapon* Weapon_GetSlot( int slot ) const;
-    if (!Weapon_GetSlot)
-    {
-        const char* key = "CBaseCombatCharacter::Weapon_GetSlot";
-        int offset;
-        if (!GetVtableOffset(key, &offset)) return false;
-
-        PassInfo ret, params[1];
-
-        ret.type = PassType_Basic;
-        ret.flags = PASSFLAG_BYVAL;
-        ret.size = sizeof(void*);
-        
-        params[0].type = PassType_Basic;
-        params[0].flags = PASSFLAG_BYVAL;
-        params[0].size = sizeof(int);
-
-        Weapon_GetSlot = g_pBinTools->CreateVCall(offset, 0, 0, &ret, params, 1);
-        ASSERT_CALLER_INIT(Weapon_GetSlot);
-
-    }
-
-    return true;
-
-}
-
-bool Freeguns::QueryRunning(char *error, size_t maxlength)
-{
-    SM_CHECK_IFACE(BINTOOLS, g_pBinTools);
-
-    return CallWrappers::wrappersInitialized;
-}
 
 /*
 Native Definitions
