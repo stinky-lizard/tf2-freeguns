@@ -117,9 +117,9 @@ static bool weGood_CanPickup = false;
 
 bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon)
 {
-    g_pSM->LogMessage(myself, "-----------------------------------------");              //DEBUG
-    g_pSM->LogMessage(myself, "-----------------------------------------");              //DEBUG
-    g_pSM->LogMessage(myself, "-----------------------------------------");              //DEBUG
+    g_pSM->LogMessage(myself, "");              //DEBUG
+    g_pSM->LogMessage(myself, "");              //DEBUG
+    g_pSM->LogMessage(myself, "");              //DEBUG
     g_pSM->LogMessage(myself, "Starting pickup process.");              //DEBUG
     // g_pSM->LogMessage(myself, "DETOUR: PRE   CanPickup");               //DEBUG
     
@@ -347,7 +347,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
 
 
     g_GetLoadout_hook = {};
-    
+
     return out;
 }
 
@@ -368,6 +368,8 @@ CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot,
             g_pSM->LogMessage(myself, "Weapon_GetSlot failed to find weapon!"); //DEBUG
         }
     }
+
+    g_pSM->LogMessage(myself, "Weapon in slotToPlace: ", gamehelpers->GetEntityClassname(out)); //DEBUG
     
     getEntDetourEnabled = false;
     
