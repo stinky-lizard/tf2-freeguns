@@ -78,6 +78,26 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     
     if (!InitDetour("CTFPlayer::PickupWeaponFromOther", &g_PickupWeapon_hook, (void*)(&CTFPlayerDetours::detour_PickupWeaponFromOther))) return false;
 
+
+    auto instructionPointer = (void*)(&CTFPlayer::PickupWeaponFromOther);
+
+    // while (*instructionPointer != 0xC3) {
+    //     ZydisDecodedInstruction ix{};
+
+    //     ZydisDecoderDecodeInstruction(&decoder, nullptr, reinterpret_cast<void*>(instructionPointer), 15, &ix);
+
+    //     // Follow JMPs
+    //     if (ix.opcode == 0xE9) {
+    //         instructionPointer += ix.length + (int32_t)ix.raw.imm[0].value.s;
+    //     } else {
+    //         instructionPointer += ix.length;
+    //     }
+    // }
+    instructionPointer += 0x88; //switch instruction pointer to the test just after the dynamic_cast after GetEnt
+
+    g_PickupWeapon_mid_hook = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther);
+
+
     // if (!InitDetour("CBaseCombatCharacter::Weapon_GetSlot", &g_WeaponGetSlot_hook, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot))) return false;
     
     //do this in PickupWeapon
@@ -88,6 +108,15 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     
     return true;
 }
+
+void patch_PickupWeaponFromOther(SafetyHookContext& ctx)
+{
+    // if (ctx.rax == 0)
+    // {
+    //     ctx.rax == 1;
+    // }
+}
+
 
 
 //Iniitialize detours
@@ -428,6 +457,8 @@ void Freeguns::SDK_OnUnload()
     if (g_WeaponGetSlot_hook) g_WeaponGetSlot_hook = {};
     if (g_Translate_hook) g_Translate_hook = {};
     if (g_GetEnt_hook) g_GetEnt_hook = {};
+
+    if (g_PickupWeapon_mid_hook) g_PickupWeapon_mid_hook = {};
 
 }
 

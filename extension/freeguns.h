@@ -77,6 +77,8 @@ SafetyHookInline g_WeaponGetSlot_hook{};
 SafetyHookInline g_GetEnt_hook{};
 SafetyHookInline g_Translate_hook{};
 
+SafetyHookMid g_PickupWeapon_mid_hook{};
+
 //Detour functions to bind to the objects
 
 class CTFPlayerDetours : public CTFPlayer
@@ -105,6 +107,8 @@ public:
 };
 
 extern const char* detour_TranslateWeaponEntForClass( const char *pszName, int iClass );
+
+void patch_PickupWeaponFromOther(SafetyHookContext& ctx);
 
 //Wrapper function to bind the detours
 
