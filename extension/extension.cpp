@@ -172,7 +172,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) con
     return out; 
 }
 
-static bool printMyWeaponSlots = false;
+static bool printMyWeaponSlots = false;         //DEBUG
 static bool isDroppedWeaponDisallowed = false;
 
 
@@ -221,17 +221,17 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     
     // g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");            //DEBUG
     
-    // if (printMyWeaponSlots)
-    // {
-    //     printMyWeaponSlots = false;
-    //     g_pSM->LogMessage(myself, "SLOT 0: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 0) ? "true" : "false"); //DEBUG
-    //     g_pSM->LogMessage(myself, "SLOT 1: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 1) ? "true" : "false"); //DEBUG
-    //     g_pSM->LogMessage(myself, "SLOT 2: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 2) ? "true" : "false"); //DEBUG
-    //     g_pSM->LogMessage(myself, "SLOT 3: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 3) ? "true" : "false"); //DEBUG
-    //     g_pSM->LogMessage(myself, "SLOT 4: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 4) ? "true" : "false"); //DEBUG
-    //     g_pSM->LogMessage(myself, "SLOT 5: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 5) ? "true" : "false"); //DEBUG
-    //     g_pSM->LogMessage(myself, "SLOT 6: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 6) ? "true" : "false"); //DEBUG
-    // }
+    if (printMyWeaponSlots)
+    {
+        printMyWeaponSlots = false;
+        g_pSM->LogMessage(myself, "SLOT 0: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 0) ? "true" : "false"); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 1: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 1) ? "true" : "false"); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 2: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 2) ? "true" : "false"); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 3: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 3) ? "true" : "false"); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 4: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 4) ? "true" : "false"); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 5: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 5) ? "true" : "false"); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 6: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 6) ? "true" : "false"); //DEBUG
+    }
 
     //remove GetLoadoutSlot detour, dont need it anymore for now (not until the next pickup event)
     g_GetLoadout_hook = {};
@@ -281,6 +281,9 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
                 //the weapon is meant for this class!
                 slotToDrop_PickupWeapon = slotForThisClass;
 
+                //the spy is weird
+                if (i == 8) printMyWeaponSlots = true;   //DEBUG
+
                 if (i == 8 && slotForThisClass == 1)
                 {
                     //this is a secondary on the spy -- it's a revolver!!!
@@ -318,7 +321,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
         slotToDrop_PickupWeapon = SLOTTODROP_PW_DEFAULT;
     }
     
-    // if (iLoadoutClass == 8) printMyWeaponSlots = true;
+    if (iLoadoutClass == 8) printMyWeaponSlots = true;   //DEBUG
 
     if (iLoadoutClass == 8 && out == 1)
     {
