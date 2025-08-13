@@ -32,8 +32,6 @@
 #include "extension.h"
 #include "freeguns.h"
 
-#include <Zydis.h>
-
 #include <string>
 #include <iostream>
 
@@ -80,122 +78,8 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     
     if (!InitDetour("CTFPlayer::PickupWeaponFromOther", &g_PickupWeapon_hook, (void*)(&CTFPlayerDetours::detour_PickupWeaponFromOther))) return false;
 
-
-    auto instructionPointer = (void*)(g_PickupWeapon_hook.target());
-    
-    ZydisDecoder decoder{};
-
-    #if SAFETYHOOK_ARCH_X86_64
-        ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
-    #elif SAFETYHOOK_ARCH_X86_32
-        ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LEGACY_32, ZYDIS_STACK_WIDTH_32);
-    #endif
-    
-    g_pSM->LogMessage(myself, "Searching instructions & patching functions...");
-    
-    void* pointerForPatch1, *pointerForPatch2, *pointerForPatch3, *pointerForPatch4;
-    
-    for (int i = 0; i < 50; i++) {
-        ZydisDecodedInstruction ix{};
-        ZydisDecodedOperand opds[10];
-        
-        ZydisDecoderDecodeFull(&decoder, reinterpret_cast<void*>(instructionPointer), 15, &ix, opds);
-        
-        //TEST rax, rax
-        if (ix.opcode == 0x85 && ix.length == 3 && opds[0].reg.value == 0x35)
-        {
-            // g_pSM->LogMessage(myself, "%i: ip = %x:", i, instructionPointer);
-            // g_pSM->LogMessage(myself, "length = %i, opcode = %x", ix.length, ix.opcode);
-            // g_pSM->LogMessage(myself, "mnemonic: %i", ix.mnemonic);
-            // g_pSM->LogMessage(myself, "(TEST is 785)");
-            // g_pSM->LogMessage(myself, "opds 0: reg: %x", opds[0].reg.value);
-
-            //it's probably ours
-            break;
-        }
-        instructionPointer += ix.length;
-    }
-    pointerForPatch1 = instructionPointer;
- 
-    // instructionPointer += 3;    //this WOULD go to the next instruction... if we didn't just insert a few by making a detour.
-        
-    for (int i = 0; i < 50; i++) {
-        ZydisDecodedInstruction ix{};
-        ZydisDecodedOperand opds[10];
-        
-        ZydisDecoderDecodeFull(&decoder, reinterpret_cast<void*>(instructionPointer), 15, &ix, opds);
-        
-        //MOV rdi, rax
-        if (ix.opcode == 0x89 && ix.length == 3 && opds[0].reg.value == 0x3c)
-        {
-            // g_pSM->LogMessage(myself, "%i: ip = %x:", i, instructionPointer);
-            // g_pSM->LogMessage(myself, "length = %i, opcode = %x", ix.length, ix.opcode);
-            // g_pSM->LogMessage(myself, "mnemonic: %i", ix.mnemonic);
-            // g_pSM->LogMessage(myself, "(TEST is 785)");
-            // g_pSM->LogMessage(myself, "opds 0: reg: %x", opds[0].reg.value);
-            
-            //it's probably ours
-            break;
-        }
-
-        instructionPointer += ix.length;
-    }
-    
-    pointerForPatch2 = instructionPointer;
-
-    for (int i = 0; i < 50; i++) {
-        ZydisDecodedInstruction ix{};
-        ZydisDecodedOperand opds[10];
-        
-        ZydisDecoderDecodeFull(&decoder, reinterpret_cast<void*>(instructionPointer), 15, &ix, opds);
-        
-        //TEST rax, rax
-        if (ix.opcode == 0x85 && ix.length == 3 && opds[0].reg.value == 0x35) break;
-        instructionPointer += ix.length;
-    }
-    
-    pointerForPatch3 = instructionPointer;
-
-    for (int i = 0; i < 50; i++) {
-        ZydisDecodedInstruction ix{};
-        ZydisDecodedOperand opds[10];
-        
-        ZydisDecoderDecodeFull(&decoder, reinterpret_cast<void*>(instructionPointer), 15, &ix, opds);
-        
-        //MOV [rbp+var_58], rax
-        if (ix.opcode == 0x89 && ix.length == 4 && opds[0].mem.base == 0x3a)
-        {
-            g_pSM->LogMessage(myself, "Found hook 4 location.");
-            // g_pSM->LogMessage(myself, "+8b: ip = %x:", instructionPointer);
-            // g_pSM->LogMessage(myself, "length = %i, opcode = %x", ix.length, ix.opcode);
-            // g_pSM->LogMessage(myself, "opds 0: mem: type: %x", opds[0].mem.type);
-            // g_pSM->LogMessage(myself, "opds 0: mem: base: %x", opds[0].mem.base);
-            // g_pSM->LogMessage(myself, "opds 0: mem: indx: %x", opds[0].mem.index);
-            // g_pSM->LogMessage(myself, "opds 0: mem: scal: %x", opds[0].mem.scale);
-            // g_pSM->LogMessage(myself, "opds 0: mem: segm: %x", opds[0].mem.segment);
-            // g_pSM->LogMessage(myself, "opds 0: mem: hdis: %x", opds[0].mem.disp.has_displacement);
-            // g_pSM->LogMessage(myself, "opds 0: mem: hdis: %x", opds[0].mem.disp.value);
-            
-            break;
-        }
-        instructionPointer += ix.length;
-    }
-    
-    pointerForPatch4 = instructionPointer;
-
-    g_pSM->LogMessage(myself, "1: %x (%i)", pointerForPatch1, pointerForPatch1);
-    g_pSM->LogMessage(myself, "2: %x (%i)", pointerForPatch2, pointerForPatch2);
-    g_pSM->LogMessage(myself, "3: %x (%i)", pointerForPatch3, pointerForPatch3);
-    g_pSM->LogMessage(myself, "4: %x (%i)", pointerForPatch4, pointerForPatch4);
-    //create_mid inserts instructions at the given pointer and pushes everything past it down.
-    //... so just do it in reverse, so 1 will push 2, 3, and 4 down, instead of having to work around 1.
-    g_PickupWeapon_mid_hook_4 = safetyhook::create_mid(pointerForPatch4, patch_PickupWeaponFromOther_4);
-    g_PickupWeapon_mid_hook_3 = safetyhook::create_mid(pointerForPatch3, patch_PickupWeaponFromOther_3);
-    g_PickupWeapon_mid_hook_2 = safetyhook::create_mid(pointerForPatch2, patch_PickupWeaponFromOther_2);
-    g_PickupWeapon_mid_hook_1 = safetyhook::create_mid(pointerForPatch1, patch_PickupWeaponFromOther_1);
-
-    //FIXME:
-    //I'm not sure this way will work to jump past the post-GetEnt check.
+    //On the pWeapon checks and skipping past "if (!pWeapon) return false":
+    //I don't think mid-function hooks will work to jump past the post-GetEnt check.
     //The problem is that the code we want (outside of the "if (pWeapon)" in the source) is basically right alongside the code we don't.
     //It's not on a separate execution block - to get to what we want we have to go through tons of stuff like UTIL_Remove(pWeapon).
     //So skipping the check means some very important stuff won't happen (like networking)
@@ -206,6 +90,11 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     //However, I'm unsure if it would be a permanent change, and if we'd have to turn it off and on.
     //I did find this cool post: https://www.unknowncheats.me/forum/c-and-c-/67884-mid-function-hook-deal.html
     //also this: https://forums.alliedmods.net/showthread.php?t=317175
+
+    //Update: I've looked at SourceScramble, and it seems like that would be a good solution for adding a JMP.
+    //I'm gonna move on to other stuff for now, since picking up without a held weapon really just applies to the sapper, pda, & buildings,
+    //and in case someone doesn't have a weapon. But if they don't they can just die or resupply.
+    //But I MUST come back to this. My pride requires it. And it'd be cool as hell.
     
 
     // if (!InitDetour("CBaseCombatCharacter::Weapon_GetSlot", &g_WeaponGetSlot_hook, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot))) return false;
@@ -218,83 +107,6 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     
     return true;
 }
-
-void patch_PickupWeaponFromOther_1(SafetyHookContext& ctx)
-{
-    g_pSM->LogMessage(myself, "patch_PickupWeapon 1 ran!");   //DEBUG
-    #if SAFETYHOOK_OS_WINDOWS
-    #if SAFETYHOOK_ARCH_X86_64
-    g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
-    #elif SAFETYHOOK_ARCH_X86_32
-    g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
-    #endif
-    #elif SAFETYHOOK_OS_LINUX
-    #if SAFETYHOOK_ARCH_X86_64
-    g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
-    if (ctx.rax == 0) ctx.rax = 1;
-    #elif SAFETYHOOK_ARCH_X86_32
-    g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
-    #endif
-    #endif
-}
-
-void patch_PickupWeaponFromOther_2(SafetyHookContext& ctx)
-{
-    g_pSM->LogMessage(myself, "patch_PickupWeapon 2 ran!");   //DEBUG
-    #if SAFETYHOOK_OS_WINDOWS
-    #if SAFETYHOOK_ARCH_X86_64
-    g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
-        #elif SAFETYHOOK_ARCH_X86_32
-            g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
-        #endif
-    #elif SAFETYHOOK_OS_LINUX
-        #if SAFETYHOOK_ARCH_X86_64
-            g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
-            if (ctx.rax == 1) ctx.rax = 0; //don't crash on the dynamic_cast
-        #elif SAFETYHOOK_ARCH_X86_32
-            g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
-        #endif
-    #endif
-}
-
-void patch_PickupWeaponFromOther_3(SafetyHookContext& ctx)
-{
-    g_pSM->LogMessage(myself, "patch_PickupWeapon 3 ran!");   //DEBUG
-    #if SAFETYHOOK_OS_WINDOWS
-    #if SAFETYHOOK_ARCH_X86_64
-    g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
-    #elif SAFETYHOOK_ARCH_X86_32
-    g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
-    #endif
-    #elif SAFETYHOOK_OS_LINUX
-    #if SAFETYHOOK_ARCH_X86_64
-    g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
-    if (ctx.rax == 0) ctx.rax = 1;
-    #elif SAFETYHOOK_ARCH_X86_32
-    g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
-    #endif
-    #endif
-}
-
-void patch_PickupWeaponFromOther_4(SafetyHookContext& ctx)
-{
-    g_pSM->LogMessage(myself, "patch_PickupWeapon 4 ran!");   //DEBUG
-    #if SAFETYHOOK_OS_WINDOWS
-    #if SAFETYHOOK_ARCH_X86_64
-    g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
-        #elif SAFETYHOOK_ARCH_X86_32
-            g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
-        #endif
-    #elif SAFETYHOOK_OS_LINUX
-        #if SAFETYHOOK_ARCH_X86_64
-            g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
-            if (ctx.rax == 1) ctx.rax = 0; //don't crash on the dynamic_cast
-        #elif SAFETYHOOK_ARCH_X86_32
-            g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
-        #endif
-    #endif
-}
-
 
 //Iniitialize detours
 bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback)
@@ -634,11 +446,6 @@ void Freeguns::SDK_OnUnload()
     if (g_WeaponGetSlot_hook) g_WeaponGetSlot_hook = {};
     if (g_Translate_hook) g_Translate_hook = {};
     if (g_GetEnt_hook) g_GetEnt_hook = {};
-
-    if (g_PickupWeapon_mid_hook_1) g_PickupWeapon_mid_hook_1 = {};
-    if (g_PickupWeapon_mid_hook_2) g_PickupWeapon_mid_hook_2 = {};
-    if (g_PickupWeapon_mid_hook_3) g_PickupWeapon_mid_hook_3 = {};
-    if (g_PickupWeapon_mid_hook_4) g_PickupWeapon_mid_hook_4 = {};
 
 }
 
