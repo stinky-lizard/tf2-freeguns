@@ -78,11 +78,13 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     
     if (!InitDetour("CTFPlayer::PickupWeaponFromOther", &g_PickupWeapon_hook, (void*)(&CTFPlayerDetours::detour_PickupWeaponFromOther))) return false;
 
-    if (!InitDetour("CBaseCombatCharacter::Weapon_GetSlot", &g_WeaponGetSlot_hook, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot))) return false;
+    // if (!InitDetour("CBaseCombatCharacter::Weapon_GetSlot", &g_WeaponGetSlot_hook, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot))) return false;
     
-    if (!InitDetour("CTFPlayer::GetEntityForLoadoutSlot", &g_GetEnt_hook, (void*)(&CTFPlayerDetours::detour_GetEntityForLoadoutSlot))) return false;
+    //do this in PickupWeapon
+    // if (!InitDetour("CTFPlayer::GetEntityForLoadoutSlot", &g_GetEnt_hook, (void*)(&CTFPlayerDetours::detour_GetEntityForLoadoutSlot))) return false;
     
-    if (!InitDetour("TranslateWeaponEntForClass", &g_Translate_hook, (void*)(&detour_TranslateWeaponEntForClass))) return false;
+    //also this
+    // if (!InitDetour("TranslateWeaponEntForClass", &g_Translate_hook, (void*)(&detour_TranslateWeaponEntForClass))) return false;
     
     return true;
 }
@@ -108,7 +110,7 @@ bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback)
     
     *hookObj = safetyhook::create_inline(pAddress, callback);
 
-    g_pSM->LogMessage(myself, "Created InlineHook for %s", gamedata);    //DEBUG
+    // g_pSM->LogMessage(myself, "Created InlineHook for %s", gamedata);    //DEBUG
 
     return true;
 }
@@ -213,12 +215,22 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     //detour GetLoadoutSlot so we can replace the slot it says with our own
     if (!InitDetour("CTFItemDefinition::GetLoadoutSlot", &g_GetLoadout_hook, (void*)(&CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon))) 
         g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_PickupWeapon!");
-    
-    //detour GetEntityForLoadoutSlot so we can drop another class's weapon and Weapon_GetSlot to get that weapon
-    getEntDetourEnabled = true;
+        
+    if (!InitDetour("CBaseCombatCharacter::Weapon_GetSlot", &g_WeaponGetSlot_hook, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot)))
+        g_pSM->LogError(myself, "Could not initialize detour_Weapon_GetSlot!");
 
+
+    //detour GetEntityForLoadoutSlot so we can drop another class's weapon and Weapon_GetSlot to get that weapon
+    //we do this here instead of OnLoad because it turns out GetEnt is called 10 times per player every frame (holy shit?)
+    //it's gotta be more performant to create and delete it than to jump to our detour that much
+    if (!InitDetour("CTFPlayer::GetEntityForLoadoutSlot", &g_GetEnt_hook, (void*)(&CTFPlayerDetours::detour_GetEntityForLoadoutSlot)))
+        g_pSM->LogError(myself, "Could not initialize detour_GetEntityForLoadoutSlot!");
+        
     //don't translate the weapon - fixes some weapons not being pickuppable on unintended classes
-    translateDetourEnabled = true;
+    if (!InitDetour("TranslateWeaponEntForClass", &g_Translate_hook, (void*)(&detour_TranslateWeaponEntForClass))) 
+        g_pSM->LogError(myself, "Could not initialize detour_TranslateWeaponEntForClass!");
+
+
     
     //actually pick up the weapon and drop ours
     bool out = g_PickupWeapon_hook.thiscall<bool>(this, pDroppedWeapon);
@@ -230,20 +242,25 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     {
         printMyWeaponSlots = false;
         const char* classname;
-        g_pSM->LogMessage(myself, "SLOT 0: %s", strcmp("", classname = gamehelpers->GetEntityClassname( g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 0) )) ? "" : classname); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 1: %s", strcmp("", classname = gamehelpers->GetEntityClassname( g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 1) )) ? "" : classname); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 2: %s", strcmp("", classname = gamehelpers->GetEntityClassname( g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 2) )) ? "" : classname); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 3: %s", strcmp("", classname = gamehelpers->GetEntityClassname( g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 3) )) ? "" : classname); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 4: %s", strcmp("", classname = gamehelpers->GetEntityClassname( g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 4) )) ? "" : classname); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 5: %s", strcmp("", classname = gamehelpers->GetEntityClassname( g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 5) )) ? "" : classname); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 6: %s", strcmp("", classname = gamehelpers->GetEntityClassname( g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 6) )) ? "" : classname); //DEBUG
+        CBaseCombatWeapon* outWeapon;
+
+        if (outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 0)) g_pSM->LogMessage(myself, "SLOT 0: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 0: NO WEAPON");   //DEBUG
+        if (outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 1)) g_pSM->LogMessage(myself, "SLOT 1: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 1: NO WEAPON");   //DEBUG
+        if (outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 2)) g_pSM->LogMessage(myself, "SLOT 2: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 2: NO WEAPON");   //DEBUG
+        if (outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 3)) g_pSM->LogMessage(myself, "SLOT 3: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 3: NO WEAPON");   //DEBUG
+        if (outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 4)) g_pSM->LogMessage(myself, "SLOT 4: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 4: NO WEAPON");   //DEBUG
+        if (outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 5)) g_pSM->LogMessage(myself, "SLOT 5: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 5: NO WEAPON");   //DEBUG
+        if (outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 6)) g_pSM->LogMessage(myself, "SLOT 6: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 6: NO WEAPON");   //DEBUG
     }
 
     //remove GetLoadoutSlot detour, dont need it anymore for now (not until the next pickup event)
-    g_GetLoadout_hook = {};
+    if (g_GetLoadout_hook) g_GetLoadout_hook = {};
     
-    getEntDetourEnabled = false;
-    translateDetourEnabled = false;
+    if (g_GetEnt_hook) g_GetEnt_hook = {};
+
+    if (g_Translate_hook) g_Translate_hook = {};
+
+    if (g_WeaponGetSlot_hook) g_WeaponGetSlot_hook = {};
     
     return out;
 }
@@ -280,15 +297,15 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
         {
             int slotForThisClass = g_GetLoadout_hook.thiscall<int>(this, i);
             
-            g_pSM->LogMessage(myself, "Slot for class %i: %i", i, slotForThisClass);    //DEBUG
+            // g_pSM->LogMessage(myself, "Slot for class %i: %i", i, slotForThisClass);    //DEBUG
             
             if (slotForThisClass != -1)
             {
                 //the weapon is meant for this class!
                 slotToDrop_PickupWeapon = slotForThisClass;
 
-                //the spy is weird
-                if (i == 8) printMyWeaponSlots = true;   //DEBUG
+                //the spy is weird (and kinda engi too)
+                if (i == 8 || i == 9) printMyWeaponSlots = true;   //DEBUG
 
                 if (i == 8 && slotForThisClass == 1)
                 {
@@ -353,9 +370,11 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
 
 CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot, bool bForceCheckWearable)
 {
+    g_pSM->LogMessage(myself, "GetEnt detour called on %i (%s) with %i", gamehelpers->EntityToBCompatRef(this), gamehelpers->GetEntityClassname(this), iLoadoutSlot);    //DEBUG
+
     CBaseEntity* out = g_GetEnt_hook.thiscall<CBaseEntity*>(this, iLoadoutSlot, bForceCheckWearable);
     
-    if (getEntDetourEnabled && !out)
+    if (!out)
     {
         g_pSM->LogMessage(myself, "GetEnt failed, falling back to WeaponGetSlot..."); //DEBUG
         
@@ -368,11 +387,12 @@ CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot,
             g_pSM->LogMessage(myself, "Weapon_GetSlot failed to find weapon!"); //DEBUG
         }
     }
+    
+    g_GetEnt_hook = {};
+    
+    if (out) g_pSM->LogMessage(myself, "GetEnt output: %i (%s)", gamehelpers->EntityToBCompatRef(out), gamehelpers->GetEntityClassname(out));   //DEBUG
+    else g_pSM->LogMessage(myself, "GetEnt output: No entity found!");  //DEBUG
 
-    g_pSM->LogMessage(myself, "Weapon in slotToPlace: ", gamehelpers->GetEntityClassname(out)); //DEBUG
-    
-    getEntDetourEnabled = false;
-    
     return out;
 }
 
@@ -384,41 +404,30 @@ CBaseCombatWeapon* CBaseCmbtChrDetours::detour_Weapon_GetSlot( int slot ) const
 //don't translate our weapons
 const char* detour_TranslateWeaponEntForClass( const char *pszName, int iClass )
 {
-    if (translateDetourEnabled)
+
+    if (strcmp(pszName, "tf_weapon_shotgun") == 0)
     {
-        translateDetourEnabled = false;
-        if (strcmp(pszName, "tf_weapon_shotgun") == 0)
-        {
-            //it doesnt know how to make that
-            g_pSM->LogMessage(myself, "Translating shotgun to shotgun_soldier..."); //DEBUG
-            pszName = "tf_weapon_shotgun_soldier";
-        }
-        return pszName;
+        //it doesnt know how to make that
+        g_pSM->LogMessage(myself, "Translating shotgun to shotgun_soldier..."); //DEBUG
+        pszName = "tf_weapon_shotgun_soldier";
     }
-    return g_Translate_hook.call<const char*>(pszName, iClass);
+    return pszName;
+
+    g_Translate_hook = {};
+
+    // return g_Translate_hook.call<const char*>(pszName, iClass);  //original
 }
 
 
 
 void Freeguns::SDK_OnUnload()
 {
-    if (g_CanPickup_hook)
-        g_CanPickup_hook = {};
-
-    if (g_PickupWeapon_hook)
-        g_PickupWeapon_hook = {};
-    
-    if (g_GetLoadout_hook)
-        g_GetLoadout_hook = {};
-    
-    if (g_WeaponGetSlot_hook)
-        g_WeaponGetSlot_hook = {};
-    
-    if (g_Translate_hook)
-        g_Translate_hook = {};
-    
-    if (g_GetEnt_hook)
-        g_GetEnt_hook = {};
+    if (g_CanPickup_hook) g_CanPickup_hook = {};
+    if (g_PickupWeapon_hook) g_PickupWeapon_hook = {};
+    if (g_GetLoadout_hook) g_GetLoadout_hook = {};
+    if (g_WeaponGetSlot_hook) g_WeaponGetSlot_hook = {};
+    if (g_Translate_hook) g_Translate_hook = {};
+    if (g_GetEnt_hook) g_GetEnt_hook = {};
 
 }
 

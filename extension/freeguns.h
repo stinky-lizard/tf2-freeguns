@@ -88,7 +88,6 @@ public:
     CBaseEntity* detour_GetEntityForLoadoutSlot( int iLoadoutSlot, bool bForceCheckWearable = false );	
     
 };
-static bool getEntDetourEnabled = false;
 
 class CTFItemDefDetours : CTFItemDefinition
 {
@@ -106,7 +105,6 @@ public:
 };
 
 extern const char* detour_TranslateWeaponEntForClass( const char *pszName, int iClass );
-static bool translateDetourEnabled = false;
 
 //Wrapper function to bind the detours
 
