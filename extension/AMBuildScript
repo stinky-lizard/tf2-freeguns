@@ -389,6 +389,8 @@ class ExtensionConfig(object):
 
   def AddSafetyhook(self, binary):
     binary.compiler.cxxincludes += [ os.path.join(self.sm_root, 'public', 'safetyhook', 'include') ]
+    binary.compiler.cxxincludes += [ os.path.join(self.sm_root, 'public', 'safetyhook', 'zydis') ]
+
 
     for task in self.libsafetyhook:
       if task.target.arch == binary.compiler.target.arch:

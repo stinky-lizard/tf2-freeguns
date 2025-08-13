@@ -32,6 +32,8 @@
 #include "extension.h"
 #include "freeguns.h"
 
+#include <Zydis.h>
+
 #include <string>
 #include <iostream>
 
@@ -79,23 +81,92 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     if (!InitDetour("CTFPlayer::PickupWeaponFromOther", &g_PickupWeapon_hook, (void*)(&CTFPlayerDetours::detour_PickupWeaponFromOther))) return false;
 
 
-    auto instructionPointer = (void*)(&CTFPlayer::PickupWeaponFromOther);
+    auto instructionPointer = (void*)(g_PickupWeapon_hook.target());
+    
+    ZydisDecoder decoder{};
 
-    // while (*instructionPointer != 0xC3) {
-    //     ZydisDecodedInstruction ix{};
+    #if SAFETYHOOK_ARCH_X86_64
+        ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
+    #elif SAFETYHOOK_ARCH_X86_32
+        ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LEGACY_32, ZYDIS_STACK_WIDTH_32);
+    #endif
+    
+    g_pSM->LogMessage(myself, "Getting data");
+    g_pSM->LogMessage(myself, "Goal: %x", instructionPointer + 0x6B);
 
-    //     ZydisDecoderDecodeInstruction(&decoder, nullptr, reinterpret_cast<void*>(instructionPointer), 15, &ix);
+    
+    for (int i = 0; i < 50; i++) {
+        ZydisDecodedInstruction ix{};
+        ZydisDecodedOperand opds[10];
+        
+        ZydisDecoderDecodeFull(&decoder, reinterpret_cast<void*>(instructionPointer), 15, &ix, opds);
+        
+        if (ix.opcode == 0x85 && opds[0].reg.value == 0x35)
+        {
+            //it's most likely TEST rax, rax
+            g_pSM->LogMessage(myself, "%i: ip = %x:", i, instructionPointer);
+            g_pSM->LogMessage(myself, "length = %i, opcode = %x", ix.length, ix.opcode);
+            g_pSM->LogMessage(myself, "mnemonic: %i", ix.mnemonic);
+            g_pSM->LogMessage(myself, "(TEST is 785)");
+            g_pSM->LogMessage(myself, "opds 0: reg: %x", opds[0].reg.value);
 
-    //     // Follow JMPs
-    //     if (ix.opcode == 0xE9) {
-    //         instructionPointer += ix.length + (int32_t)ix.raw.imm[0].value.s;
-    //     } else {
-    //         instructionPointer += ix.length;
-    //     }
-    // }
-    instructionPointer += 0x88; //switch instruction pointer to the test just after the dynamic_cast after GetEnt
+            //it's probably ours
+            break;
+        }
+        instructionPointer += ix.length;
+    }
+    
+    g_PickupWeapon_mid_hook_1 = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_1);
+    
+    instructionPointer += 3;
+    
+    if (true)   //DEBUG
+    {
+        ZydisDecodedInstruction ix{};
+        ZydisDecodedOperand opds[10];
+        
+        ZydisDecoderDecodeFull(&decoder, reinterpret_cast<void*>(instructionPointer), 15, &ix, opds);
+        
+        // if (ix.opcode == 0x85 && opds[0].reg.value == 0x35)
+        // {
+            //it's most likely TEST rax, rax
+            g_pSM->LogMessage(myself, "+3: ip = %x:", instructionPointer);
+            g_pSM->LogMessage(myself, "length = %i, opcode = %x", ix.length, ix.opcode);
+            g_pSM->LogMessage(myself, "mnemonic: %i", ix.mnemonic);
+            g_pSM->LogMessage(myself, "(TEST is 785)");
+            g_pSM->LogMessage(myself, "opds 0: reg: %x", opds[0].reg.value);
+    
+            //it's probably ours
+        // }
 
-    g_PickupWeapon_mid_hook = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther);
+    }
+
+    g_PickupWeapon_mid_hook_2 = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_2);
+    
+    for (int i = 0; i < 50; i++) {
+        ZydisDecodedInstruction ix{};
+        ZydisDecodedOperand opds[10];
+        
+        ZydisDecoderDecodeFull(&decoder, reinterpret_cast<void*>(instructionPointer), 15, &ix, opds);
+        
+        if (ix.opcode == 0x85 && opds[0].reg.value == 0x35)
+        {
+            //it's most likely TEST rax, rax
+            g_pSM->LogMessage(myself, "%i: ip = %x:", i, instructionPointer);
+            g_pSM->LogMessage(myself, "length = %i, opcode = %x", ix.length, ix.opcode);
+            g_pSM->LogMessage(myself, "mnemonic: %i", ix.mnemonic);
+            g_pSM->LogMessage(myself, "(TEST is 785)");
+            g_pSM->LogMessage(myself, "opds 0: reg: %x", opds[0].reg.value);
+
+            //it's probably ours
+            break;
+        }
+        instructionPointer += ix.length;
+    }
+
+    // g_PickupWeapon_mid_hook = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_3);
+    
+    // g_PickupWeapon_mid_hook = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_4);
 
 
     // if (!InitDetour("CBaseCombatCharacter::Weapon_GetSlot", &g_WeaponGetSlot_hook, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot))) return false;
@@ -109,15 +180,43 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     return true;
 }
 
-void patch_PickupWeaponFromOther(SafetyHookContext& ctx)
+void patch_PickupWeaponFromOther_1(SafetyHookContext& ctx)
 {
-    // if (ctx.rax == 0)
-    // {
-    //     ctx.rax == 1;
-    // }
+    g_pSM->LogMessage(myself, "patch_PickupWeapon 1 ran!");   //DEBUG
+    #if SAFETYHOOK_OS_WINDOWS
+        #if SAFETYHOOK_ARCH_X86_64
+            g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
+        #elif SAFETYHOOK_ARCH_X86_32
+            g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
+        #endif
+    #elif SAFETYHOOK_OS_LINUX
+        #if SAFETYHOOK_ARCH_X86_64
+            g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
+            if (ctx.rax == 0) ctx.rax == 1;
+        #elif SAFETYHOOK_ARCH_X86_32
+            g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
+        #endif
+    #endif
 }
 
-
+void patch_PickupWeaponFromOther_2(SafetyHookContext& ctx)
+{
+    g_pSM->LogMessage(myself, "patch_PickupWeapon 2 ran!");   //DEBUG
+    #if SAFETYHOOK_OS_WINDOWS
+        #if SAFETYHOOK_ARCH_X86_64
+            g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
+        #elif SAFETYHOOK_ARCH_X86_32
+            g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
+        #endif
+    #elif SAFETYHOOK_OS_LINUX
+        #if SAFETYHOOK_ARCH_X86_64
+            g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
+            if (ctx.rax == 1) ctx.rax == 0; //don't crash on the dynamic_cast
+        #elif SAFETYHOOK_ARCH_X86_32
+            g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
+        #endif
+    #endif
+}
 
 //Iniitialize detours
 bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback)
@@ -273,13 +372,13 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
         const char* classname;
         CBaseCombatWeapon* outWeapon;
 
-        if (outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 0)) g_pSM->LogMessage(myself, "SLOT 0: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 0: NO WEAPON");   //DEBUG
-        if (outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 1)) g_pSM->LogMessage(myself, "SLOT 1: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 1: NO WEAPON");   //DEBUG
-        if (outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 2)) g_pSM->LogMessage(myself, "SLOT 2: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 2: NO WEAPON");   //DEBUG
-        if (outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 3)) g_pSM->LogMessage(myself, "SLOT 3: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 3: NO WEAPON");   //DEBUG
-        if (outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 4)) g_pSM->LogMessage(myself, "SLOT 4: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 4: NO WEAPON");   //DEBUG
-        if (outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 5)) g_pSM->LogMessage(myself, "SLOT 5: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 5: NO WEAPON");   //DEBUG
-        if (outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 6)) g_pSM->LogMessage(myself, "SLOT 6: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 6: NO WEAPON");   //DEBUG
+        if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 0))) g_pSM->LogMessage(myself, "SLOT 0: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 0: NO WEAPON");   //DEBUG
+        if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 1))) g_pSM->LogMessage(myself, "SLOT 1: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 1: NO WEAPON");   //DEBUG
+        if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 2))) g_pSM->LogMessage(myself, "SLOT 2: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 2: NO WEAPON");   //DEBUG
+        if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 3))) g_pSM->LogMessage(myself, "SLOT 3: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 3: NO WEAPON");   //DEBUG
+        if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 4))) g_pSM->LogMessage(myself, "SLOT 4: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 4: NO WEAPON");   //DEBUG
+        if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 5))) g_pSM->LogMessage(myself, "SLOT 5: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 5: NO WEAPON");   //DEBUG
+        if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 6))) g_pSM->LogMessage(myself, "SLOT 6: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 6: NO WEAPON");   //DEBUG
     }
 
     //remove GetLoadoutSlot detour, dont need it anymore for now (not until the next pickup event)
@@ -458,7 +557,10 @@ void Freeguns::SDK_OnUnload()
     if (g_Translate_hook) g_Translate_hook = {};
     if (g_GetEnt_hook) g_GetEnt_hook = {};
 
-    if (g_PickupWeapon_mid_hook) g_PickupWeapon_mid_hook = {};
+    if (g_PickupWeapon_mid_hook_1) g_PickupWeapon_mid_hook_1 = {};
+    if (g_PickupWeapon_mid_hook_2) g_PickupWeapon_mid_hook_2 = {};
+    if (g_PickupWeapon_mid_hook_3) g_PickupWeapon_mid_hook_3 = {};
+    if (g_PickupWeapon_mid_hook_4) g_PickupWeapon_mid_hook_4 = {};
 
 }
 
