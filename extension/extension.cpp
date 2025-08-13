@@ -156,8 +156,8 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
         instructionPointer += ix.length;
     }
     
-    g_pSM->LogMessage(myself, "Patching PickupWeapon with patch 1 at %x", instructionPointer);  //DEBUG
-    g_PickupWeapon_mid_hook_3 = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_1);
+    g_pSM->LogMessage(myself, "Patching PickupWeapon with patch 3 at %x", instructionPointer);  //DEBUG
+    g_PickupWeapon_mid_hook_3 = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_3);
     
     for (int i = 0; i < 50; i++) {
         ZydisDecodedInstruction ix{};
@@ -168,6 +168,7 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
         //MOV [rbp+var_58], rax
         if (ix.opcode == 0x89 && ix.length == 4 && opds[0].mem.base == 0x3a)
         {
+            g_pSM->LogMessage(myself, "Found hook 4 location.");
             // g_pSM->LogMessage(myself, "+8b: ip = %x:", instructionPointer);
             // g_pSM->LogMessage(myself, "length = %i, opcode = %x", ix.length, ix.opcode);
             // g_pSM->LogMessage(myself, "opds 0: mem: type: %x", opds[0].mem.type);
@@ -183,8 +184,8 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
         instructionPointer += ix.length;
     }
     
-    g_pSM->LogMessage(myself, "Patching PickupWeapon with patch 2 at %x", instructionPointer);  //DEBUG
-    g_PickupWeapon_mid_hook_4 = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_2);
+    g_pSM->LogMessage(myself, "Patching PickupWeapon with patch 4 at %x", instructionPointer);  //DEBUG
+    g_PickupWeapon_mid_hook_4 = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_4);
     
     
     // if (!InitDetour("CBaseCombatCharacter::Weapon_GetSlot", &g_WeaponGetSlot_hook, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot))) return false;
@@ -235,6 +236,45 @@ void patch_PickupWeaponFromOther_2(SafetyHookContext& ctx)
         #endif
     #endif
 }
+
+void patch_PickupWeaponFromOther_3(SafetyHookContext& ctx)
+{
+    g_pSM->LogMessage(myself, "patch_PickupWeapon 3 ran!");   //DEBUG
+    #if SAFETYHOOK_OS_WINDOWS
+    #if SAFETYHOOK_ARCH_X86_64
+    g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
+    #elif SAFETYHOOK_ARCH_X86_32
+    g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
+    #endif
+    #elif SAFETYHOOK_OS_LINUX
+    #if SAFETYHOOK_ARCH_X86_64
+    g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
+    if (ctx.rax == 0) ctx.rax == 1;
+    #elif SAFETYHOOK_ARCH_X86_32
+    g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
+    #endif
+    #endif
+}
+
+void patch_PickupWeaponFromOther_4(SafetyHookContext& ctx)
+{
+    g_pSM->LogMessage(myself, "patch_PickupWeapon 4 ran!");   //DEBUG
+    #if SAFETYHOOK_OS_WINDOWS
+    #if SAFETYHOOK_ARCH_X86_64
+    g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
+        #elif SAFETYHOOK_ARCH_X86_32
+            g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
+        #endif
+    #elif SAFETYHOOK_OS_LINUX
+        #if SAFETYHOOK_ARCH_X86_64
+            g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
+            if (ctx.rax == 1) ctx.rax == 0; //don't crash on the dynamic_cast
+        #elif SAFETYHOOK_ARCH_X86_32
+            g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
+        #endif
+    #endif
+}
+
 
 //Iniitialize detours
 bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback)

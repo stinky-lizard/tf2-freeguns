@@ -113,6 +113,8 @@ extern const char* detour_TranslateWeaponEntForClass( const char *pszName, int i
 
 void patch_PickupWeaponFromOther_1(SafetyHookContext& ctx);
 void patch_PickupWeaponFromOther_2(SafetyHookContext& ctx);
+void patch_PickupWeaponFromOther_3(SafetyHookContext& ctx);
+void patch_PickupWeaponFromOther_4(SafetyHookContext& ctx);
 
 //Wrapper function to bind the detours
 
