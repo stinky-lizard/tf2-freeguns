@@ -92,7 +92,8 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     #endif
     
     g_pSM->LogMessage(myself, "Searching instructions & patching functions...");
- 
+    
+    void* pointerForPatch1, *pointerForPatch2, *pointerForPatch3, *pointerForPatch4;
     
     for (int i = 0; i < 50; i++) {
         ZydisDecodedInstruction ix{};
@@ -114,13 +115,10 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
         }
         instructionPointer += ix.length;
     }
-
-    g_pSM->LogMessage(myself, "Patching PickupWeapon with patch 1 at %x", instructionPointer);  //DEBUG
-    g_PickupWeapon_mid_hook_1 = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_1);
-    
+    pointerForPatch1 = instructionPointer;
+ 
     // instructionPointer += 3;    //this WOULD go to the next instruction... if we didn't just insert a few by making a detour.
-    
-    
+        
     for (int i = 0; i < 50; i++) {
         ZydisDecodedInstruction ix{};
         ZydisDecodedOperand opds[10];
@@ -139,12 +137,12 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
             //it's probably ours
             break;
         }
+
         instructionPointer += ix.length;
     }
     
-    g_pSM->LogMessage(myself, "Patching PickupWeapon with patch 2 at %x", instructionPointer);  //DEBUG
-    g_PickupWeapon_mid_hook_2 = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_2);
-    
+    pointerForPatch2 = instructionPointer;
+
     for (int i = 0; i < 50; i++) {
         ZydisDecodedInstruction ix{};
         ZydisDecodedOperand opds[10];
@@ -156,9 +154,8 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
         instructionPointer += ix.length;
     }
     
-    g_pSM->LogMessage(myself, "Patching PickupWeapon with patch 3 at %x", instructionPointer);  //DEBUG
-    g_PickupWeapon_mid_hook_3 = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_3);
-    
+    pointerForPatch3 = instructionPointer;
+
     for (int i = 0; i < 50; i++) {
         ZydisDecodedInstruction ix{};
         ZydisDecodedOperand opds[10];
@@ -184,10 +181,20 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
         instructionPointer += ix.length;
     }
     
-    g_pSM->LogMessage(myself, "Patching PickupWeapon with patch 4 at %x", instructionPointer);  //DEBUG
-    g_PickupWeapon_mid_hook_4 = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_4);
-    
-    
+    pointerForPatch4 = instructionPointer;
+
+    g_pSM->LogMessage(myself, "1: %x (%i)", pointerForPatch1, pointerForPatch1);
+    g_pSM->LogMessage(myself, "2: %x (%i)", pointerForPatch2, pointerForPatch2);
+    g_pSM->LogMessage(myself, "3: %x (%i)", pointerForPatch3, pointerForPatch3);
+    g_pSM->LogMessage(myself, "4: %x (%i)", pointerForPatch4, pointerForPatch4);
+    //create_mid inserts instructions at the given pointer and pushes everything past it down.
+    //... so just do it in reverse, so 1 will push 2, 3, and 4 down, instead of having to work around 1.
+    g_PickupWeapon_mid_hook_4 = safetyhook::create_mid(pointerForPatch4, patch_PickupWeaponFromOther_4);
+    g_PickupWeapon_mid_hook_3 = safetyhook::create_mid(pointerForPatch3, patch_PickupWeaponFromOther_3);
+    g_PickupWeapon_mid_hook_2 = safetyhook::create_mid(pointerForPatch2, patch_PickupWeaponFromOther_2);
+    g_PickupWeapon_mid_hook_1 = safetyhook::create_mid(pointerForPatch1, patch_PickupWeaponFromOther_1);
+
+
     // if (!InitDetour("CBaseCombatCharacter::Weapon_GetSlot", &g_WeaponGetSlot_hook, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot))) return false;
     
     //do this in PickupWeapon
@@ -211,7 +218,7 @@ void patch_PickupWeaponFromOther_1(SafetyHookContext& ctx)
     #elif SAFETYHOOK_OS_LINUX
     #if SAFETYHOOK_ARCH_X86_64
     g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
-    if (ctx.rax == 0) ctx.rax == 1;
+    if (ctx.rax == 0) ctx.rax = 1;
     #elif SAFETYHOOK_ARCH_X86_32
     g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
     #endif
@@ -230,7 +237,7 @@ void patch_PickupWeaponFromOther_2(SafetyHookContext& ctx)
     #elif SAFETYHOOK_OS_LINUX
         #if SAFETYHOOK_ARCH_X86_64
             g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
-            if (ctx.rax == 1) ctx.rax == 0; //don't crash on the dynamic_cast
+            if (ctx.rax == 1) ctx.rax = 0; //don't crash on the dynamic_cast
         #elif SAFETYHOOK_ARCH_X86_32
             g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
         #endif
@@ -249,7 +256,7 @@ void patch_PickupWeaponFromOther_3(SafetyHookContext& ctx)
     #elif SAFETYHOOK_OS_LINUX
     #if SAFETYHOOK_ARCH_X86_64
     g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
-    if (ctx.rax == 0) ctx.rax == 1;
+    if (ctx.rax == 0) ctx.rax = 1;
     #elif SAFETYHOOK_ARCH_X86_32
     g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
     #endif
@@ -268,7 +275,7 @@ void patch_PickupWeaponFromOther_4(SafetyHookContext& ctx)
     #elif SAFETYHOOK_OS_LINUX
         #if SAFETYHOOK_ARCH_X86_64
             g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
-            if (ctx.rax == 1) ctx.rax == 0; //don't crash on the dynamic_cast
+            if (ctx.rax == 1) ctx.rax = 0; //don't crash on the dynamic_cast
         #elif SAFETYHOOK_ARCH_X86_32
             g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
         #endif
