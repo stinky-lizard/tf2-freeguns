@@ -11,7 +11,7 @@
 //this is all kinda messy, but I'm not sure the functions will bind to the originals otherwise
 
 class CEconItemView;    //hoist
-class CBaseCombatWeapon;
+
 
 // class CTFPlayerClassShared
 // {
@@ -24,11 +24,10 @@ class CBaseCombatWeapon;
 
 class CTFDroppedWeapon;
 
-class CBaseEntity 
-{
-    
-};
-    
+class CBaseEntity {};
+
+class CBaseCombatWeapon : public CBaseEntity {};
+
 class CBaseCombatCharacter : public CBaseEntity
 {
 public:

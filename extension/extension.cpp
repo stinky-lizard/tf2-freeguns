@@ -123,6 +123,8 @@ bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWe
     g_pSM->LogMessage(myself, "Starting pickup process.");              //DEBUG
     // g_pSM->LogMessage(myself, "DETOUR: PRE   CanPickup");               //DEBUG
     
+    //TODO: get classname of pDroppedWeapon with gamehelpers->GetEntityClassname and return false if it's disallowed
+
     //GetLoadoutSlot is after all the preliminary checks we want to keep. we don't care that it does all that other stuff
     //well use this as a marker to tell if those checks passed
     if (!InitDetour("CTFItemDefinition::GetLoadoutSlot", &g_GetLoadout_hook, (void*)(&CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup))) 
@@ -151,8 +153,10 @@ bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWe
     else return out; //weGood_CanPickup is already false, no need to reset it
 }
 
-//TODO: for some reason this runs twice (four times for PickupWeapon). does it have to do with when and where it's initialized?
+//FIXME: for some reason this runs twice (four times for PickupWeapon). does it have to do with when and where it's initialized?
 //the others don't run twice...
+//i've disabled the hook in the function so it doesn't run a second time, but should prob figure out why this happens
+
 int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) const
 {
     //we've reached the GetLoadoutSlot call without returning, which means we've passed all the basic checks in CanPickup
@@ -221,16 +225,18 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     
     // g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");            //DEBUG
     
+
     if (printMyWeaponSlots)
     {
         printMyWeaponSlots = false;
-        g_pSM->LogMessage(myself, "SLOT 0: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 0) ? "true" : "false"); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 1: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 1) ? "true" : "false"); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 2: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 2) ? "true" : "false"); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 3: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 3) ? "true" : "false"); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 4: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 4) ? "true" : "false"); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 5: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 5) ? "true" : "false"); //DEBUG
-        g_pSM->LogMessage(myself, "SLOT 6: %s", g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 6) ? "true" : "false"); //DEBUG
+        const char* classname;
+        g_pSM->LogMessage(myself, "SLOT 0: %s", strcmp("", classname = gamehelpers->GetEntityClassname( g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 0) )) ? "" : classname); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 1: %s", strcmp("", classname = gamehelpers->GetEntityClassname( g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 1) )) ? "" : classname); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 2: %s", strcmp("", classname = gamehelpers->GetEntityClassname( g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 2) )) ? "" : classname); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 3: %s", strcmp("", classname = gamehelpers->GetEntityClassname( g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 3) )) ? "" : classname); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 4: %s", strcmp("", classname = gamehelpers->GetEntityClassname( g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 4) )) ? "" : classname); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 5: %s", strcmp("", classname = gamehelpers->GetEntityClassname( g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 5) )) ? "" : classname); //DEBUG
+        g_pSM->LogMessage(myself, "SLOT 6: %s", strcmp("", classname = gamehelpers->GetEntityClassname( g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 6) )) ? "" : classname); //DEBUG
     }
 
     //remove GetLoadoutSlot detour, dont need it anymore for now (not until the next pickup event)
@@ -289,7 +295,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
                     //this is a secondary on the spy -- it's a revolver!!!
                     //drop the primary instead because it's a secondary that's selected with 1
 
-                    //TODO: this might cause a lot of problems. we might have nothing in some slot.
+                    //FIXME: this might cause a lot of problems. we might have nothing in some slot.
 
                     slotToDrop_PickupWeapon = 0;
                     // printMyWeaponSlots = true;
@@ -304,6 +310,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
 
                     //TODO: find WHY this crashes and fix that.
                     //DEBUG: allow knives for now while testing
+                    //TODO: move to top of detour_CanPickup
 
                     // isDroppedWeaponDisallowed = true;
                     // slotToDrop_PickupWeapon = -1;
