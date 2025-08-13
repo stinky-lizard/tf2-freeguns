@@ -91,9 +91,8 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
         ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LEGACY_32, ZYDIS_STACK_WIDTH_32);
     #endif
     
-    g_pSM->LogMessage(myself, "Getting data");
-    g_pSM->LogMessage(myself, "Goal: %x", instructionPointer + 0x6B);
-
+    g_pSM->LogMessage(myself, "Searching instructions & patching functions...");
+ 
     
     for (int i = 0; i < 50; i++) {
         ZydisDecodedInstruction ix{};
@@ -101,46 +100,49 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
         
         ZydisDecoderDecodeFull(&decoder, reinterpret_cast<void*>(instructionPointer), 15, &ix, opds);
         
-        if (ix.opcode == 0x85 && opds[0].reg.value == 0x35)
+        //TEST rax, rax
+        if (ix.opcode == 0x85 && ix.length == 3 && opds[0].reg.value == 0x35)
         {
-            //it's most likely TEST rax, rax
-            g_pSM->LogMessage(myself, "%i: ip = %x:", i, instructionPointer);
-            g_pSM->LogMessage(myself, "length = %i, opcode = %x", ix.length, ix.opcode);
-            g_pSM->LogMessage(myself, "mnemonic: %i", ix.mnemonic);
-            g_pSM->LogMessage(myself, "(TEST is 785)");
-            g_pSM->LogMessage(myself, "opds 0: reg: %x", opds[0].reg.value);
+            // g_pSM->LogMessage(myself, "%i: ip = %x:", i, instructionPointer);
+            // g_pSM->LogMessage(myself, "length = %i, opcode = %x", ix.length, ix.opcode);
+            // g_pSM->LogMessage(myself, "mnemonic: %i", ix.mnemonic);
+            // g_pSM->LogMessage(myself, "(TEST is 785)");
+            // g_pSM->LogMessage(myself, "opds 0: reg: %x", opds[0].reg.value);
 
             //it's probably ours
             break;
         }
         instructionPointer += ix.length;
     }
-    
+
+    g_pSM->LogMessage(myself, "Patching PickupWeapon with patch 1 at %x", instructionPointer);  //DEBUG
     g_PickupWeapon_mid_hook_1 = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_1);
     
-    instructionPointer += 3;
+    // instructionPointer += 3;    //this WOULD go to the next instruction... if we didn't just insert a few by making a detour.
     
-    if (true)   //DEBUG
-    {
+    
+    for (int i = 0; i < 50; i++) {
         ZydisDecodedInstruction ix{};
         ZydisDecodedOperand opds[10];
         
         ZydisDecoderDecodeFull(&decoder, reinterpret_cast<void*>(instructionPointer), 15, &ix, opds);
         
-        // if (ix.opcode == 0x85 && opds[0].reg.value == 0x35)
-        // {
-            //it's most likely TEST rax, rax
-            g_pSM->LogMessage(myself, "+3: ip = %x:", instructionPointer);
-            g_pSM->LogMessage(myself, "length = %i, opcode = %x", ix.length, ix.opcode);
-            g_pSM->LogMessage(myself, "mnemonic: %i", ix.mnemonic);
-            g_pSM->LogMessage(myself, "(TEST is 785)");
-            g_pSM->LogMessage(myself, "opds 0: reg: %x", opds[0].reg.value);
-    
+        //MOV rdi, rax
+        if (ix.opcode == 0x89 && ix.length == 3 && opds[0].reg.value == 0x3c)
+        {
+            // g_pSM->LogMessage(myself, "%i: ip = %x:", i, instructionPointer);
+            // g_pSM->LogMessage(myself, "length = %i, opcode = %x", ix.length, ix.opcode);
+            // g_pSM->LogMessage(myself, "mnemonic: %i", ix.mnemonic);
+            // g_pSM->LogMessage(myself, "(TEST is 785)");
+            // g_pSM->LogMessage(myself, "opds 0: reg: %x", opds[0].reg.value);
+            
             //it's probably ours
-        // }
-
+            break;
+        }
+        instructionPointer += ix.length;
     }
-
+    
+    g_pSM->LogMessage(myself, "Patching PickupWeapon with patch 2 at %x", instructionPointer);  //DEBUG
     g_PickupWeapon_mid_hook_2 = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_2);
     
     for (int i = 0; i < 50; i++) {
@@ -149,26 +151,42 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
         
         ZydisDecoderDecodeFull(&decoder, reinterpret_cast<void*>(instructionPointer), 15, &ix, opds);
         
-        if (ix.opcode == 0x85 && opds[0].reg.value == 0x35)
+        //TEST rax, rax
+        if (ix.opcode == 0x85 && ix.length == 3 && opds[0].reg.value == 0x35) break;
+        instructionPointer += ix.length;
+    }
+    
+    g_pSM->LogMessage(myself, "Patching PickupWeapon with patch 1 at %x", instructionPointer);  //DEBUG
+    g_PickupWeapon_mid_hook_3 = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_1);
+    
+    for (int i = 0; i < 50; i++) {
+        ZydisDecodedInstruction ix{};
+        ZydisDecodedOperand opds[10];
+        
+        ZydisDecoderDecodeFull(&decoder, reinterpret_cast<void*>(instructionPointer), 15, &ix, opds);
+        
+        //MOV [rbp+var_58], rax
+        if (ix.opcode == 0x89 && ix.length == 4 && opds[0].mem.base == 0x3a)
         {
-            //it's most likely TEST rax, rax
-            g_pSM->LogMessage(myself, "%i: ip = %x:", i, instructionPointer);
-            g_pSM->LogMessage(myself, "length = %i, opcode = %x", ix.length, ix.opcode);
-            g_pSM->LogMessage(myself, "mnemonic: %i", ix.mnemonic);
-            g_pSM->LogMessage(myself, "(TEST is 785)");
-            g_pSM->LogMessage(myself, "opds 0: reg: %x", opds[0].reg.value);
-
-            //it's probably ours
+            // g_pSM->LogMessage(myself, "+8b: ip = %x:", instructionPointer);
+            // g_pSM->LogMessage(myself, "length = %i, opcode = %x", ix.length, ix.opcode);
+            // g_pSM->LogMessage(myself, "opds 0: mem: type: %x", opds[0].mem.type);
+            // g_pSM->LogMessage(myself, "opds 0: mem: base: %x", opds[0].mem.base);
+            // g_pSM->LogMessage(myself, "opds 0: mem: indx: %x", opds[0].mem.index);
+            // g_pSM->LogMessage(myself, "opds 0: mem: scal: %x", opds[0].mem.scale);
+            // g_pSM->LogMessage(myself, "opds 0: mem: segm: %x", opds[0].mem.segment);
+            // g_pSM->LogMessage(myself, "opds 0: mem: hdis: %x", opds[0].mem.disp.has_displacement);
+            // g_pSM->LogMessage(myself, "opds 0: mem: hdis: %x", opds[0].mem.disp.value);
+            
             break;
         }
         instructionPointer += ix.length;
     }
-
-    // g_PickupWeapon_mid_hook = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_3);
     
-    // g_PickupWeapon_mid_hook = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_4);
-
-
+    g_pSM->LogMessage(myself, "Patching PickupWeapon with patch 2 at %x", instructionPointer);  //DEBUG
+    g_PickupWeapon_mid_hook_4 = safetyhook::create_mid(instructionPointer, patch_PickupWeaponFromOther_2);
+    
+    
     // if (!InitDetour("CBaseCombatCharacter::Weapon_GetSlot", &g_WeaponGetSlot_hook, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot))) return false;
     
     //do this in PickupWeapon
@@ -184,18 +202,18 @@ void patch_PickupWeaponFromOther_1(SafetyHookContext& ctx)
 {
     g_pSM->LogMessage(myself, "patch_PickupWeapon 1 ran!");   //DEBUG
     #if SAFETYHOOK_OS_WINDOWS
-        #if SAFETYHOOK_ARCH_X86_64
-            g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
-        #elif SAFETYHOOK_ARCH_X86_32
-            g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
-        #endif
+    #if SAFETYHOOK_ARCH_X86_64
+    g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
+    #elif SAFETYHOOK_ARCH_X86_32
+    g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
+    #endif
     #elif SAFETYHOOK_OS_LINUX
-        #if SAFETYHOOK_ARCH_X86_64
-            g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
-            if (ctx.rax == 0) ctx.rax == 1;
-        #elif SAFETYHOOK_ARCH_X86_32
-            g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
-        #endif
+    #if SAFETYHOOK_ARCH_X86_64
+    g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
+    if (ctx.rax == 0) ctx.rax == 1;
+    #elif SAFETYHOOK_ARCH_X86_32
+    g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
+    #endif
     #endif
 }
 
@@ -203,8 +221,8 @@ void patch_PickupWeaponFromOther_2(SafetyHookContext& ctx)
 {
     g_pSM->LogMessage(myself, "patch_PickupWeapon 2 ran!");   //DEBUG
     #if SAFETYHOOK_OS_WINDOWS
-        #if SAFETYHOOK_ARCH_X86_64
-            g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
+    #if SAFETYHOOK_ARCH_X86_64
+    g_pSM->LogMessage(myself, "64 bits. rax = %i", ctx.rax);    //DEBUG
         #elif SAFETYHOOK_ARCH_X86_32
             g_pSM->LogMessage(myself, "32 bits. eax = %i", ctx.eax);    //DEBUG
         #endif
