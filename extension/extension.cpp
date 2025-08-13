@@ -194,6 +194,19 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
     g_PickupWeapon_mid_hook_2 = safetyhook::create_mid(pointerForPatch2, patch_PickupWeaponFromOther_2);
     g_PickupWeapon_mid_hook_1 = safetyhook::create_mid(pointerForPatch1, patch_PickupWeaponFromOther_1);
 
+    //FIXME:
+    //I'm not sure this way will work to jump past the post-GetEnt check.
+    //The problem is that the code we want (outside of the "if (pWeapon)" in the source) is basically right alongside the code we don't.
+    //It's not on a separate execution block - to get to what we want we have to go through tons of stuff like UTIL_Remove(pWeapon).
+    //So skipping the check means some very important stuff won't happen (like networking)
+    //but not skipping the check means we crash.
+    
+    //The only way I can think of is to write in a jump operation to just past the UTIL_Remove, probably specifically address 0000000000F69DC9 in the assembly.
+    //That would probably go best in the GetEnt detour, just after the Weapon_GetSlot call.
+    //However, I'm unsure if it would be a permanent change, and if we'd have to turn it off and on.
+    //I did find this cool post: https://www.unknowncheats.me/forum/c-and-c-/67884-mid-function-hook-deal.html
+    //also this: https://forums.alliedmods.net/showthread.php?t=317175
+    
 
     // if (!InitDetour("CBaseCombatCharacter::Weapon_GetSlot", &g_WeaponGetSlot_hook, (void*)(&CBaseCmbtChrDetours::detour_Weapon_GetSlot))) return false;
     
