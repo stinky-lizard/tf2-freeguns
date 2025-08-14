@@ -118,9 +118,9 @@ bool CTFItemDefDetours::IsDroppedWeaponAllowed(int myClass) const
             return true;   //DEBUG
         }
     }
-
     //TODO: do we want to disable sappers and buildings?
-
+    
+    return true;
 }
 
 
