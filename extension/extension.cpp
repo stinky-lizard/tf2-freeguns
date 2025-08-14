@@ -54,9 +54,6 @@ bool freegunsEnabled = NULL;
     Declarations
 */
 
-// cell_t EnableDetours(IPluginContext *pContext, const cell_t *params);
-// cell_t DisableDetours(IPluginContext *pContext, const cell_t *params);
-
 /*
 Bind Natives & Hooks 
 */
@@ -70,14 +67,13 @@ bool Freeguns::SDK_OnLoad(char *error, size_t maxlen, bool late)
 	{
 		if (conf_error[0])
 		{
-			snprintf(error, maxlen, "Could not read tf2.freeguns.txt: %s\n", conf_error);
+			snprintf(error, maxlen, "Could not find tf2.freeguns.txt: %s\n", conf_error);
 		}
 		return false;
 	}
     
-    //init and enable detours here
-
-    if (!InitAllDetours()) return false;
+    //the plugin will call the native to enable the detours
+    // if (!InitAllDetours()) return false;
 
     //On the pWeapon checks and skipping past "if (!pWeapon) return false":
     //I don't think mid-function hooks will work to jump past the post-GetEnt check.
@@ -108,14 +104,26 @@ void Freeguns::SDK_OnUnload()
 
 const sp_nativeinfo_t MyNatives[] = 
 {
-    // {"enableDetours", EnableDetours},
-    // {"disableDetours", DisableDetours},
+    {"native_enableDetours", EnableDetours},
+    {"native_disableDetours", DisableDetours},
 	{NULL,			NULL},
 };
 
 void Freeguns::SDK_OnAllLoaded()
 {
-    // sharesys->AddNatives(myself, MyNatives);
+    sharesys->AddNatives(myself, MyNatives);
+}
+
+cell_t EnableDetours(IPluginContext *pContext, const cell_t *params)
+{
+    if (InitAllDetours()) return 1;
+    else return -1;
+}
+
+cell_t DisableDetours(IPluginContext *pContext, const cell_t *params)
+{
+    if (DeleteAllDetours()) return 1;
+    else return -1;
 }
 
 

@@ -10,8 +10,13 @@
 bool InitAllDetours();
 bool DeleteAllDetours();
 
-//Other stuff needed
 
+//Natives
+
+cell_t EnableDetours(IPluginContext *pContext, const cell_t *params);
+cell_t DisableDetours(IPluginContext *pContext, const cell_t *params);
+
+//Other stuff needed
 
 extern IGameConfig *g_pGameConf;
 

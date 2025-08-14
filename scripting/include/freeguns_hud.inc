@@ -18,6 +18,7 @@ void HudOnEntityCreated(int entity, const char[] classname)
 {
 	if (!StrEqual(classname, "tf_dropped_weapon") || !enabledVar.BoolValue || !hudVar.BoolValue || !mapLoaded)
 		return;
+	LogMessage("Weapon dropped"); //DEBUG
 
 	RequestFrame(DroppedWeaponNextFrame, EntIndexToEntRef(entity));
 }
@@ -158,8 +159,7 @@ bool CanClientPickUpWeapon(int client, int weapon)
 	else if	(!IsPlayerAlive(client)) return false;
 	else if (TF2_IsPlayerInCondition(client, TFCond_Disguised) || TF2_IsPlayerInCondition(client, TFCond_Stealthed)) return false;
 	else if (GetClientAimTarget(client, false) != weapon) return false;
-	else if (DoesClientHaveWeaponToDrop(client, weapon)) return true;
-	else return false;
+	else return true;
 }
 
 bool IsClientInRange(int client, int weapon)

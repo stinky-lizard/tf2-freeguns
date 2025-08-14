@@ -64,10 +64,10 @@ static bool weGood_CanPickup = false;
 
 bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWeapon)
 {
-    g_pSM->LogMessage(myself, "");              //DEBUG
-    g_pSM->LogMessage(myself, "");              //DEBUG
-    g_pSM->LogMessage(myself, "");              //DEBUG
-    g_pSM->LogMessage(myself, "Starting pickup process.");              //DEBUG
+    // g_pSM->LogMessage(myself, "");              //DEBUG
+    // g_pSM->LogMessage(myself, "");              //DEBUG
+    // g_pSM->LogMessage(myself, "");              //DEBUG
+    // g_pSM->LogMessage(myself, "Starting pickup process.");              //DEBUG
     // g_pSM->LogMessage(myself, "DETOUR: PRE   CanPickup");               //DEBUG
     
     //TODO: get classname of pDroppedWeapon with gamehelpers->GetEntityClassname and return false if it's disallowed
@@ -115,7 +115,7 @@ bool CTFItemDefDetours::IsDroppedWeaponAllowed(int myClass) const
             // g_pSM->LogMessage(myself, "Weapon is a knife, return %s!", myClass == 8 ? "true" : "false"); //DEBUG
             
             // return myClass == 8;
-            return true;   //DEBUG
+            return true;   //DEBUG_TOREMOVE
         }
     }
     //TODO: do we want to disable sappers and buildings?
@@ -149,7 +149,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) con
     return out; 
 }
 
-static bool printMyWeaponSlots = false;         //DEBUG
+// static bool printMyWeaponSlots = false;         //DEBUG
 static bool isDroppedWeaponDisallowed = false;
 
 
@@ -209,20 +209,20 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
     // g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");            //DEBUG
     
 
-    if (printMyWeaponSlots)
-    {
-        printMyWeaponSlots = false;
-        const char* classname;
-        CBaseCombatWeapon* outWeapon;
+    // if (printMyWeaponSlots)
+    // {
+    //     printMyWeaponSlots = false;
+    //     const char* classname;
+    //     CBaseCombatWeapon* outWeapon;
 
-        if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 0))) g_pSM->LogMessage(myself, "SLOT 0: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 0: NO WEAPON");   //DEBUG
-        if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 1))) g_pSM->LogMessage(myself, "SLOT 1: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 1: NO WEAPON");   //DEBUG
-        if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 2))) g_pSM->LogMessage(myself, "SLOT 2: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 2: NO WEAPON");   //DEBUG
-        if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 3))) g_pSM->LogMessage(myself, "SLOT 3: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 3: NO WEAPON");   //DEBUG
-        if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 4))) g_pSM->LogMessage(myself, "SLOT 4: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 4: NO WEAPON");   //DEBUG
-        if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 5))) g_pSM->LogMessage(myself, "SLOT 5: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 5: NO WEAPON");   //DEBUG
-        if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 6))) g_pSM->LogMessage(myself, "SLOT 6: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 6: NO WEAPON");   //DEBUG
-    }
+    //     if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 0))) g_pSM->LogMessage(myself, "SLOT 0: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 0: NO WEAPON");   //DEBUG
+    //     if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 1))) g_pSM->LogMessage(myself, "SLOT 1: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 1: NO WEAPON");   //DEBUG
+    //     if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 2))) g_pSM->LogMessage(myself, "SLOT 2: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 2: NO WEAPON");   //DEBUG
+    //     if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 3))) g_pSM->LogMessage(myself, "SLOT 3: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 3: NO WEAPON");   //DEBUG
+    //     if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 4))) g_pSM->LogMessage(myself, "SLOT 4: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 4: NO WEAPON");   //DEBUG
+    //     if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 5))) g_pSM->LogMessage(myself, "SLOT 5: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 5: NO WEAPON");   //DEBUG
+    //     if ((outWeapon = g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, 6))) g_pSM->LogMessage(myself, "SLOT 6: %s", gamehelpers->GetEntityClassname(outWeapon)); else g_pSM->LogMessage(myself, "SLOT 6: NO WEAPON");   //DEBUG
+    // }
 
     //remove GetLoadoutSlot detour, dont need it anymore for now (not until the next pickup event)
     if (g_GetLoadout_hook) g_GetLoadout_hook = {};
@@ -255,7 +255,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
     
     // g_pSM->LogMessage(myself, "DETOUR: POST  GetLoadout_PW");                //DEBUG
     
-    g_pSM->LogMessage(myself, "out (me):         %i", out);                       //DEBUG
+    // g_pSM->LogMessage(myself, "out (me):         %i", out);                       //DEBUG
     
     //would we not be able to pick this up? 
     if (out == -1)
@@ -276,7 +276,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
                 slotToDrop_PickupWeapon = slotForThisClass;
 
                 //the spy is weird (and kinda engi too)
-                if (i == 8 || i == 9) printMyWeaponSlots = true;   //DEBUG
+                // if (i == 8 || i == 9) printMyWeaponSlots = true;   //DEBUG
 
                 if (i == 8 && slotForThisClass == 1)
                 {
@@ -288,35 +288,20 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
                     slotToDrop_PickupWeapon = 0;
                     // printMyWeaponSlots = true;
                 }
-                else if (i == 8 && slotForThisClass == 2)
-                {
-                    //this is a melee on the spy -- it's a knife!
-                    //the spy can equip some all-class melees, but those are also equippable by the scout, so the for loop would stop at the scout
-                    //this would stop the function after GetEnt doesn't find a weapon in slot -1, but we're skipping past that check.
-                    //isDroppedWeaponDisallowed will be checked - if its true, don't skip past that return false in PickupWeapon.
-                    //result: GetEnt finds nothing and PickupWeapon returns false.
-
-                    //TODO: find WHY this crashes and fix that.
-                    //DEBUG: allow knives for now while testing
-                    //TODO: move to top of detour_CanPickup
-
-                    // isDroppedWeaponDisallowed = true;
-                    // slotToDrop_PickupWeapon = -1;
-                }
                 break;
             }
             // otherwise move on to the next
         }
 
         
-        g_pSM->LogMessage(myself, "slotToPlace:      %i", slotToDrop_PickupWeapon);   //DEBUG
+        // g_pSM->LogMessage(myself, "slotToPlace:      %i", slotToDrop_PickupWeapon);   //DEBUG
         
         out = slotToDrop_PickupWeapon;
         //reset it
         slotToDrop_PickupWeapon = SLOTTODROP_PW_DEFAULT;
     }
     
-    if (iLoadoutClass == 8) printMyWeaponSlots = true;   //DEBUG
+    // if (iLoadoutClass == 8) printMyWeaponSlots = true;   //DEBUG
 
     if (iLoadoutClass == 8 && out == 1)
     {
@@ -326,7 +311,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
 
         slotToDrop_PickupWeapon = 0;
         out = slotToDrop_PickupWeapon;
-        g_pSM->LogMessage(myself, "slotToPlace 2:    %i", slotToDrop_PickupWeapon);   //DEBUG
+        // g_pSM->LogMessage(myself, "slotToPlace 2:    %i", slotToDrop_PickupWeapon);   //DEBUG
     }
     // if (iLoadoutClass == 8 && out == 2)
     // {
@@ -341,28 +326,28 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
 
 CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot, bool bForceCheckWearable)
 {
-    g_pSM->LogMessage(myself, "GetEnt detour called on %i (%s) with %i", gamehelpers->EntityToBCompatRef(this), gamehelpers->GetEntityClassname(this), iLoadoutSlot);    //DEBUG
+    // g_pSM->LogMessage(myself, "GetEnt detour called on %i (%s) with %i", gamehelpers->EntityToBCompatRef(this), gamehelpers->GetEntityClassname(this), iLoadoutSlot);    //DEBUG
 
     CBaseEntity* out = g_GetEnt_hook.thiscall<CBaseEntity*>(this, iLoadoutSlot, bForceCheckWearable);
     
     if (!out)
     {
-        g_pSM->LogMessage(myself, "GetEnt failed, falling back to WeaponGetSlot..."); //DEBUG
+        // g_pSM->LogMessage(myself, "GetEnt failed, falling back to WeaponGetSlot..."); //DEBUG
         
         //it didn't find anything, probably because the slot is filled by another class' weapon.
         out = (CBaseEntity*) g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, iLoadoutSlot);
-        if (!out)
-        {
-            //uh oh
-            //... or we're picking up a weapon into a slot that isn't filled
-            g_pSM->LogMessage(myself, "Weapon_GetSlot failed to find weapon!"); //DEBUG
-        }
+        // if (!out)
+        // {
+        //     //uh oh
+        //     //... or we're picking up a weapon into a slot that isn't filled
+        //     g_pSM->LogMessage(myself, "Weapon_GetSlot failed to find weapon!"); //DEBUG
+        // }
     }
     
     g_GetEnt_hook = {};
     
-    if (out) g_pSM->LogMessage(myself, "GetEnt output: %i (%s)", gamehelpers->EntityToBCompatRef(out), gamehelpers->GetEntityClassname(out));   //DEBUG
-    else g_pSM->LogMessage(myself, "GetEnt output: No entity found!");  //DEBUG
+    // if (out) g_pSM->LogMessage(myself, "GetEnt output: %i (%s)", gamehelpers->EntityToBCompatRef(out), gamehelpers->GetEntityClassname(out));   //DEBUG
+    // else g_pSM->LogMessage(myself, "GetEnt output: No entity found!");  //DEBUG
 
     return out;
 }
@@ -379,7 +364,7 @@ const char* detour_TranslateWeaponEntForClass( const char *pszName, int iClass )
     if (strcmp(pszName, "tf_weapon_shotgun") == 0)
     {
         //it doesnt know how to make that
-        g_pSM->LogMessage(myself, "Translating shotgun to shotgun_soldier..."); //DEBUG
+        // g_pSM->LogMessage(myself, "Translating shotgun to shotgun_soldier..."); //DEBUG
         pszName = "tf_weapon_shotgun_soldier";
     }
     return pszName;

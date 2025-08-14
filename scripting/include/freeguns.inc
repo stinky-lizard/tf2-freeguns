@@ -1,10 +1,6 @@
-/**
- * Prints an output to the console.
- * 
- * @param in1    Test input.
- * @return      Test return.
- */
-native int testFunc(int in1);
+
+native int native_enableDetours();
+native int native_disableDetours();
 
 /**
  * Load extension
