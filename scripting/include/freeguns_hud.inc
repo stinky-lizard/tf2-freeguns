@@ -69,7 +69,8 @@ void DroppedWeaponNextFrame(int entityref)
 
 	//TODO fix all this
 	//THIS IS TEMPORARY
-	CreateSpacers(33, topspacer, bottomspacer);
+	topspacer = "";
+	bottomspacer = "  ";
 	Format(messagetext, sizeof messagetext, "%sPress Action Button (def. H)\n%sto pick up this weapon!", topspacer, bottomspacer);
 	//END TEMPORARY
 
@@ -109,7 +110,9 @@ void CreateSpacers(int len, char[] topspacer, char[] bottomspacer, bool disabled
 	}
 	else
 	{
-		toplen = strlen("Press Action Button (def. H) to pick up");
+		//TODO: TEMPORARY
+		toplen = strlen("Press Action Button (def. H)");
+		// toplen = strlen("Press Action Button (def. H) to pick up");
 		bottomlen = len;
 	}
 
