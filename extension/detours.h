@@ -26,9 +26,9 @@ class CEconItemView;    //hoist
 // class CTFPlayerClass : public CTFPlayerClassShared {};
 
 
-class CTFDroppedWeapon;
-
 class CBaseEntity {};
+
+class CTFDroppedWeapon : public CBaseEntity {};
 
 class CBaseCombatWeapon : public CBaseEntity {};
 
@@ -99,6 +99,10 @@ class CTFItemDefDetours : CTFItemDefinition
 public:
     int detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) const; //might as well make this const too
     int detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) const; 
+ 
+    //Returns true if the weapon is allowed to be picked up.
+    //Returns false if it's disabled; e.g. it causes crashes.
+    bool IsDroppedWeaponAllowed(int myClass) const;
 
 };
 
@@ -113,5 +117,6 @@ extern const char* detour_TranslateWeaponEntForClass( const char *pszName, int i
 
 
 bool InitDetour(const char* gamedata, SafetyHookInline *hookObj, void* callback);
+
 
 #endif  //_INCLUDE_SOURCEMOD_EXTENSION_FREEGUNS_DETOURS_H_

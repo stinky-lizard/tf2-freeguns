@@ -100,6 +100,30 @@ bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWe
     else return out; //weGood_CanPickup is already false, no need to reset it
 }
 
+bool CTFItemDefDetours::IsDroppedWeaponAllowed(int myClass) const
+{   
+    //class 8 is spy, slot 2 is melee. would this weapon be a melee on spy (i.e. is it a knife?)
+    if (g_GetLoadout_hook.thiscall<int>(this, 8) == 2)
+    {
+        //would this weapon not be equipable by other classes (i.e. is it not an allclass?)
+        //(spy can equip a couple allclass weapons as knives)
+        if (g_GetLoadout_hook.thiscall<int>(this, 1) == -1)
+        {
+            //it's a knife
+            //if we're spy, it's fine
+            //if not, it's disallowed
+            // g_pSM->LogMessage(myself, "Weapon is a knife, return %s!", myClass == 8 ? "true" : "false"); //DEBUG
+            
+            // return myClass == 8;
+            return true;   //DEBUG
+        }
+    }
+
+    //TODO: do we want to disable sappers and buildings?
+
+}
+
+
 //FIXME: for some reason this runs twice (four times for PickupWeapon). does it have to do with when and where it's initialized?
 //the others don't run twice...
 //i've disabled the hook in the function so it doesn't run a second time, but should prob figure out why this happens
@@ -113,6 +137,8 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) con
     // g_pSM->LogMessage(myself, "DETOUR: PRE   GetLoadout_CP");                //DEBUG
     // g_pSM->LogMessage(myself, "DETOUR: Setting weGood");                //DEBUG
     weGood_CanPickup = true;
+    
+    if (!(this->IsDroppedWeaponAllowed(iLoadoutClass))) weGood_CanPickup = false;
     
     // if (!g_GetLoadout_hook) g_pSM->LogMessage(myself, "DETOUR: Something's wrong...");                //DEBUG
     
