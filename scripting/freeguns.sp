@@ -77,8 +77,6 @@ public void OnPluginStart()
 
 	if (GetConVarBool(enabledVar)) EnableDetours();
 
-	LogMessage("MapLoaded: %b", mapLoaded);
-
 	enabledVar.AddChangeHook(EnabledVarChanged);
 }
 

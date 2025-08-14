@@ -78,6 +78,7 @@ bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWe
     g_pSM->LogError(myself, "Could not initialize detour_GetLoadoutSlot_CanPickup!");
     
     //call the original
+    if (!g_CanPickup_hook) return false;
     bool out = g_CanPickup_hook.thiscall<bool>(this, pWeapon);
 
     
@@ -103,6 +104,7 @@ bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWe
 bool CTFItemDefDetours::IsDroppedWeaponAllowed(int myClass) const
 {   
     //class 8 is spy, slot 2 is melee. would this weapon be a melee on spy (i.e. is it a knife?)
+    if (!g_GetLoadout_hook) return true;
     if (g_GetLoadout_hook.thiscall<int>(this, 8) == 2)
     {
         //would this weapon not be equipable by other classes (i.e. is it not an allclass?)
@@ -142,6 +144,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) con
     
     // if (!g_GetLoadout_hook) g_pSM->LogMessage(myself, "DETOUR: Something's wrong...");                //DEBUG
     
+    if (!g_GetLoadout_hook) return -1;
     int out = g_GetLoadout_hook.thiscall<int>(this, iLoadoutClass);
     
     g_GetLoadout_hook = {};
@@ -204,6 +207,7 @@ bool CTFPlayerDetours::detour_PickupWeaponFromOther(CTFDroppedWeapon *pDroppedWe
 
     
     //actually pick up the weapon and drop ours
+    if (!g_PickupWeapon_hook) return false;
     bool out = g_PickupWeapon_hook.thiscall<bool>(this, pDroppedWeapon);
     
     // g_pSM->LogMessage(myself, "DETOUR: POST  PickupWeapon");            //DEBUG
@@ -251,6 +255,7 @@ int CTFItemDefDetours::detour_GetLoadoutSlot_PickupWeapon ( int iLoadoutClass ) 
     int slotToDrop_PickupWeapon = SLOTTODROP_PW_DEFAULT;
     
     //first get the original result
+    if (!g_GetLoadout_hook) return -1;
     int out = g_GetLoadout_hook.thiscall<int>(this, iLoadoutClass);
     
     // g_pSM->LogMessage(myself, "DETOUR: POST  GetLoadout_PW");                //DEBUG
@@ -328,6 +333,7 @@ CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot,
 {
     // g_pSM->LogMessage(myself, "GetEnt detour called on %i (%s) with %i", gamehelpers->EntityToBCompatRef(this), gamehelpers->GetEntityClassname(this), iLoadoutSlot);    //DEBUG
 
+    if (!g_GetEnt_hook) return nullptr;
     CBaseEntity* out = g_GetEnt_hook.thiscall<CBaseEntity*>(this, iLoadoutSlot, bForceCheckWearable);
     
     if (!out)
@@ -335,6 +341,7 @@ CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot,
         // g_pSM->LogMessage(myself, "GetEnt failed, falling back to WeaponGetSlot..."); //DEBUG
         
         //it didn't find anything, probably because the slot is filled by another class' weapon.
+        if (!g_WeaponGetSlot_hook) return nullptr;
         out = (CBaseEntity*) g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, iLoadoutSlot);
         // if (!out)
         // {
@@ -354,6 +361,7 @@ CBaseEntity* CTFPlayerDetours::detour_GetEntityForLoadoutSlot( int iLoadoutSlot,
 
 CBaseCombatWeapon* CBaseCmbtChrDetours::detour_Weapon_GetSlot( int slot ) const
 {
+    if (!g_WeaponGetSlot_hook) return nullptr;
     return g_WeaponGetSlot_hook.thiscall<CBaseCombatWeapon*>(this, slot);
 }
 

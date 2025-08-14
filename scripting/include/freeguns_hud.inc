@@ -18,7 +18,6 @@ void HudOnEntityCreated(int entity, const char[] classname)
 {
 	if (!StrEqual(classname, "tf_dropped_weapon") || !enabledVar.BoolValue || !hudVar.BoolValue || !mapLoaded)
 		return;
-	LogMessage("Weapon dropped"); //DEBUG
 
 	RequestFrame(DroppedWeaponNextFrame, EntIndexToEntRef(entity));
 }
@@ -67,6 +66,12 @@ void DroppedWeaponNextFrame(int entityref)
 		CreateSpacers(len, topspacer, bottomspacer);
 		Format(messagetext, sizeof messagetext, "%sPress Action Button (def. H) to pick up\n%s%s's %s %s!", topspacer, bottomspacer, clientname, qualityname, itemname);
 	}
+
+	//TODO fix all this
+	//THIS IS TEMPORARY
+	CreateSpacers(33, topspacer, bottomspacer);
+	Format(messagetext, sizeof messagetext, "%sPress Action Button (def. H)\n%sto pick up this weapon!", topspacer, bottomspacer);
+	//END TEMPORARY
 
 	DispatchKeyValue(worldtext, "message", messagetext);
 	SetVariantString("!activator");
