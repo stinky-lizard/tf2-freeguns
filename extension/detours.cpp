@@ -3,6 +3,10 @@
 #include <freeguns.h>
 #include <detours.h>
 
+//use 32 bit
+#define SAFETYHOOK_ARCH_X86_32 1
+#define SAFETYHOOK_ARCH_X86_64 0
+
 
 bool InitAllDetours()
 {
@@ -79,6 +83,9 @@ bool CTFPlayerDetours::detour_CanPickupDroppedWeapon(const CTFDroppedWeapon *pWe
     
     //call the original
     if (!g_CanPickup_hook) return false;
+    
+    g_pSM->LogMessage(myself, "Test 1!");
+    
     bool out = g_CanPickup_hook.thiscall<bool>(this, pWeapon);
 
     
@@ -132,6 +139,7 @@ bool CTFItemDefDetours::IsDroppedWeaponAllowed(int myClass) const
 
 int CTFItemDefDetours::detour_GetLoadoutSlot_CanPickup ( int iLoadoutClass ) const
 {
+    g_pSM->LogMessage(myself, "Test 2!");
     //we've reached the GetLoadoutSlot call without returning, which means we've passed all the basic checks in CanPickup
     //(is alive, isn't taunting, etc.)
     //we also passed the check for if we have an active weapon, which I'm not completely sure if we need... but eh.
